@@ -6,47 +6,43 @@
 //
 import Foundation
 import Compression
+internal enum ErrorCases: Error {
+	case lessdata
+	case multipart
+	case method
+	case magic
+	case decode
+}
+extension NSManagedObject {
+	convenience init(in context: NSManagedObjectContext) {
+		self.init(entity: type(of: self).entity(), insertInto: context)
+	}
+}
 extension FileHandle {
-	func readData(count: Int) throws -> Data {
+	func readData(count: Int) -> Data? {
 		let previous: UInt64 = offsetInFile
 		let data: Data = readData(ofLength: count)
 		guard data.count == count else {
 			seek(toFileOffset: previous)
-			throw ErrorCases.lessdata
+			return nil
 		}
 		return data
 	}
-	func readElement<T>() throws -> T {
-		return try readData(count: MemoryLayout<T>.size).withUnsafeBytes { $0.pointee }
+	func readElement<T>() -> T? {
+		return readData(count: MemoryLayout<T>.size)?.withUnsafeBytes { $0.pointee }
 	}
-	func readArray<T>(count: Int) throws -> [T] {
-		return try readData(count: MemoryLayout<T>.stride * count).withUnsafeBytes { Array(UnsafeBufferPointer(start: $0, count: count)) }
+	func readArray<T>(count: Int) -> [T]? {
+		return readData(count: MemoryLayout<T>.stride * count)?.withUnsafeBytes { Array(UnsafeBufferPointer(start: $0, count: count)) }
 	}
-	func readString() throws -> String {
+	func readString() -> String {
 		var array: [CChar] = []
-		func recursive() throws -> [CChar] {
-			let char: CChar = try readElement()
-			return try [char] + ( char == 0 ? [] : recursive() )
+		func recursive() -> [CChar] {
+			guard let char: CChar = readElement(), char != 0 else {
+				return []
+			}
+			return [char] + recursive()
 		}
-		return try String(cString: recursive())
-	}
-}
-
-internal enum ErrorCases: Error {
-	case lessdata
-	case NoModelFound(name: String)
-	case NoPlistFound(name: String)
-	case NoEntityFound(name: String)
-	case NoRecourdFound(name: String)
-	case NoResourceFound(name: String, extension: String)
-	case InvalidFormat(of: Any, for: Any)
-	case NoImplemented(feature: String)
-	case NoFileDownload(from: URL)
-	case UnknownError(message: String)
-}
-internal extension NSManagedObject {
-	class var entityName: String {
-		return String(describing: self)
+		return String(cString: recursive())
 	}
 }
 internal extension Array {
@@ -54,7 +50,6 @@ internal extension Array {
 		guard indices.contains(index) else {
 			return nil
 		}
-		
 		return self[index]
 	}
 }
@@ -63,23 +58,19 @@ internal extension UnsafePointer {
 		defer {
 			self = advanced(by: MemoryLayout<T>.size)
 		}
-		return withMemoryRebound(to: T.self, capacity: 1) {
-			$0.pointee
-		}
+		return withMemoryRebound(to: T.self, capacity: 1) { $0.pointee }
 	}
 	mutating func readArray<T>(count: Int) -> [T] {
 		defer {
 			self = advanced(by: MemoryLayout<T>.stride * count)
 		}
-		return withMemoryRebound(to: T.self, capacity: count) {
-			Array(UnsafeBufferPointer(start: $0, count: count))
-		}
+		return withMemoryRebound(to: T.self, capacity: count) { Array(UnsafeBufferPointer(start: $0, count: count)) }
 	}
 	mutating func readData(count: Int) -> Data {
 		defer {
 			self = advanced(by: count)
 		}
-		return Data(bytes: self, count: count)
+		return Data(bytesNoCopy: UnsafeMutablePointer(mutating: self), count: count, deallocator: .none)
 	}
 	mutating func readString() -> String {
 		func recursive() -> Array<CChar> {
@@ -88,7 +79,6 @@ internal extension UnsafePointer {
 		}
 		return String(cString: recursive())
 	}
-	
 }
 internal extension Data {//mapped memory expectation
 	func gunzip(to: URL) throws {//fixed data length -> undeterminant data length
@@ -106,21 +96,31 @@ internal extension Data {//mapped memory expectation
 			
 			let magic: UInt16 = seek.readElement()
 			guard head.distance(to: seek) < count else { throw ErrorCases.lessdata }
-			guard magic == 35615 else { throw ErrorCases.InvalidFormat(of: magic, for: "magic") }
+			guard magic == 35615 else {
+				throw ErrorCases.magic
+			}
 	
 			let method: UInt8 = seek.readElement()
 			guard head.distance(to: seek) < count else { throw ErrorCases.lessdata }
-			guard method == 8 else { throw ErrorCases.InvalidFormat(of: method, for: "method") }
+			guard method == 8 else {
+				throw ErrorCases.method
+			}
 			
 			let flags: UInt8 = seek.readElement()
+			guard head.distance(to: seek) < count else { throw ErrorCases.lessdata }
 			
 			let time: UInt32 = seek.readElement()
+			guard head.distance(to: seek) < count else { throw ErrorCases.lessdata }
 			
 			let extra: UInt8 = seek.readElement()
+			guard head.distance(to: seek) < count else { throw ErrorCases.lessdata }
 			
 			let os: UInt8 = seek.readElement()
+			guard head.distance(to: seek) < count else { throw ErrorCases.lessdata }
 			
-			guard flags & ( 1 << 1 ) == 0 else { throw ErrorCases.NoImplemented(feature: "multipart") }
+			guard flags & ( 1 << 1 ) == 0 else {
+				throw ErrorCases.multipart
+			}
 			
 			let field: Data = {
 				guard 0 < ( flags & ( 1 << 2 ) ) else { return Data() }
@@ -165,7 +165,7 @@ internal extension Data {//mapped memory expectation
 							fileHandle.write(Data(bytesNoCopy: cache, count: cache.distance(to: stream.pointee.dst_ptr), deallocator: .none))
 							return
 						case COMPRESSION_STATUS_ERROR:
-							throw ErrorCases.NoEntityFound(name: "")
+							throw ErrorCases.decode
 						default:
 							fatalError()
 						}
@@ -176,17 +176,16 @@ internal extension Data {//mapped memory expectation
 		try fileManager.moveItem(at: temporary, to: to)
 	}
 }
+/*
 internal extension FileHandle {
 	//reference: http://www.onicos.com/staff/iz/formats/gzip.html
 	func gunzip() throws -> Data {
 		
 		seek(toFileOffset: 0)
 		
-		let magic: UInt16 = try readElement()
-		guard magic == 35615 else { throw ErrorCases.InvalidFormat(of: magic, for: "magic") }
+		guard let magic: UInt16 = readElement(), magic == 35615 else { throw ErrorCases.InvalidFormat(of: magic, for: "magic") }
 		
-		let method: UInt8 = try readElement()
-		guard method == 8 else { throw ErrorCases.InvalidFormat(of: method, for: "method") }
+		guard let method: UInt8 = readElement(), method == 8 else { throw ErrorCases.InvalidFormat(of: method, for: "method") }
 		
 		let flags: UInt8 = try readElement()
 		
@@ -246,3 +245,4 @@ internal extension FileHandle {
 		}
 	}
 }
+*/

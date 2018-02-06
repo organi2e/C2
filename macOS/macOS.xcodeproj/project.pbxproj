@@ -91,14 +91,14 @@
 		875432072029AF64006D00C4 /* C2 */ = {
 			isa = PBXGroup;
 			children = (
-				875432242029AF74006D00C4 /* Container.swift */,
-				8754321F2029AF74006D00C4 /* Container+CIFAR10.swift */,
-				875432262029AF74006D00C4 /* Container+Context.swift */,
-				8754321E2029AF74006D00C4 /* Container+MNIST.swift */,
-				875432232029AF74006D00C4 /* Container+URLSessionDelegate.swift */,
 				875432272029AF74006D00C4 /* Content.swift */,
-				875432252029AF74006D00C4 /* Extensions.swift */,
 				875432202029AF74006D00C4 /* Image.swift */,
+				875432242029AF74006D00C4 /* Container.swift */,
+				875432262029AF74006D00C4 /* Container+Context.swift */,
+				875432232029AF74006D00C4 /* Container+URLSessionDelegate.swift */,
+				8754321E2029AF74006D00C4 /* Container+MNIST.swift */,
+				8754321F2029AF74006D00C4 /* Container+CIFAR10.swift */,
+				875432252029AF74006D00C4 /* Extensions.swift */,
 				875432212029AF74006D00C4 /* Model.xcdatamodeld */,
 				8754321D2029AF73006D00C4 /* Property.plist */,
 				875432082029AF64006D00C4 /* C2.h */,

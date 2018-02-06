@@ -21,7 +21,6 @@ extension Container {
 	}
 	public enum MNISTError: Error {
 		case format
-		case entity
 	}
 }
 private extension Container {
@@ -33,6 +32,9 @@ private extension Container {
 	}
 }
 private extension Container {
+	private func endian(value: UInt32) -> Int {
+		return Int(UInt32(bigEndian: value))
+	}
 	private func update(mnist: MNIST, context: NSManagedObjectContext, image: URL, label: URL) throws {
 		try context.fetch(series: mnist).forEach {
 			context.delete($0)
@@ -40,23 +42,29 @@ private extension Container {
 		}
 		let labelHandle: FileHandle = try FileHandle(forReadingFrom: label)
 		let imageHandle: FileHandle = try FileHandle(forReadingFrom: image)
-		let labelheader: [UInt32] = try labelHandle.readArray(count: 2).map { UInt32(bigEndian: $0) }
-		let imageheader: [UInt32] = try imageHandle.readArray(count: 4).map { UInt32(bigEndian: $0) }
 		guard
-			let labelcount: UInt32 = labelheader[safe: 1],
-			let imagecount: UInt32 = imageheader[safe: 1],
-			let rows: UInt32 = imageheader[safe: 2],
-			let cols: UInt32 = imageheader[safe: 3], labelcount == imagecount else {
+			let labelheader: [UInt32] = labelHandle.readArray(count: 2),
+			let imageheader: [UInt32] = imageHandle.readArray(count: 4) else {
 				throw MNISTError.format
 		}
-		let count: Int = Int(min(labelcount, imagecount))
+		let labelheads: [Int] = labelheader.map { Int(UInt32(bigEndian: $0)) }
+		let imageheads: [Int] = imageheader.map { Int(UInt32(bigEndian: $0)) }
+		guard
+			let labelcount: Int = labelheads[safe: 1],
+			let imagecount: Int = imageheads[safe: 1],
+			let rows: Int = imageheads[safe: 2],
+			let cols: Int = imageheads[safe: 3], labelcount == imagecount else {
+				throw MNISTError.format
+		}
+		let count: Int = min(labelcount, imagecount)
+		let bytes: Int = rows * cols
 		try Array(repeating: (), count: count).forEach {
-			guard let image: Image = NSManagedObject(entity: Image.entity(), insertInto: context) as? Image else {
-				throw MNISTError.entity
+			guard
+				let pixel: Data = imageHandle.readData(count: bytes),
+				let label: UInt8 = labelHandle.readElement() else {
+					throw MNISTError.format
 			}
-			let pixel: Data = try imageHandle.readData(count: Int(rows * cols))
-			let label: UInt8 = try labelHandle.readElement()
-			
+			let image: Image = Image(in: context)
 			image.domain = MNIST.domain
 			image.family = mnist.family
 			image.handle = Int(label)
@@ -67,8 +75,8 @@ private extension Container {
 			image.rowBytes = UInt32(cols)
 			image.format = kCIFormatA8
 			image.data = pixel
+			try context.save()
 		}
-		try context.save()
 		notification?.success(build: mnist)
 	}
 	private func update(mnist: MNIST, image: URL, label: URL) {
@@ -132,7 +140,7 @@ private extension Container {
 		case (.t10k, labelKey):
 			return #selector(mnist10k(label:)).description
 		default:
-			throw ErrorTypes.selector
+			throw ErrorCases.selector
 		}
 	}
 }
@@ -141,14 +149,14 @@ extension Container {
 		let fileManager: FileManager = .default
 		let (imageURL, labelURL): (URL, URL) = try cache(mnist: mnist)
 		guard let dictionary: [String: URL] = global[MNIST.domain]?[mnist.family] else {
-			throw ErrorTypes.dictionary
+			throw ErrorCases.dictionary
 		}
 		let stable: Bool = try [(imageURL, imageKey), (labelURL, labelKey)].reduce(true) {
 			guard !fileManager.fileExists(atPath: $1.0.path) else {
 				return $0
 			}
 			guard let global: URL = dictionary[$1.1] else {
-				throw ErrorTypes.url
+				throw ErrorCases.url
 			}
 			let downloadTask: URLSessionDownloadTask = urlsession.downloadTask(with: global)
 			downloadTask.taskDescription = try selector(mnist: mnist, key: $1.1)

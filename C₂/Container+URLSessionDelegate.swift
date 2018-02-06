@@ -19,11 +19,11 @@ extension Container: URLSessionDownloadDelegate {
 	public func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
 		do {
 			guard let description: String = downloadTask.taskDescription else {
-				throw ErrorTypes.description
+				throw ErrorCases.description
 			}
 			let selector: Selector = Selector(stringLiteral: description)
 			guard responds(to: selector) else {
-				throw ErrorTypes.selector
+				throw ErrorCases.selector
 			}
 			let error: NSErrorPointer = NSErrorPointer(nilLiteral: ())
 			perform(selector, with: location, with: error)
