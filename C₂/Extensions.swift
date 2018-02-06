@@ -81,14 +81,7 @@ internal extension UnsafePointer {
 	}
 }
 internal extension Data {//mapped memory expectation
-	func gunzip(to: URL) throws {//fixed data length -> undeterminant data length
-		
-		let fileManager: FileManager = .default
-		let temporary: URL = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-		if !fileManager.fileExists(atPath: temporary.path) {
-			fileManager.createFile(atPath: temporary.path, contents: nil, attributes: nil)
-		}
-		let fileHandle: FileHandle = try FileHandle(forWritingTo: temporary)
+	func gunzip(to: FileHandle) throws {//fixed data length -> undeterminant data length
 		
 		try withUnsafeBytes { (head: UnsafePointer<UInt8>) in
 			
@@ -160,9 +153,9 @@ internal extension Data {//mapped memory expectation
 						stream.pointee.dst_size = size
 						switch compression_stream_process(stream, 0) {
 						case COMPRESSION_STATUS_OK:
-							fileHandle.write(Data(bytesNoCopy: cache, count: cache.distance(to: stream.pointee.dst_ptr), deallocator: .none))
+							to.write(Data(bytesNoCopy: cache, count: cache.distance(to: stream.pointee.dst_ptr), deallocator: .none))
 						case COMPRESSION_STATUS_END:
-							fileHandle.write(Data(bytesNoCopy: cache, count: cache.distance(to: stream.pointee.dst_ptr), deallocator: .none))
+							to.write(Data(bytesNoCopy: cache, count: cache.distance(to: stream.pointee.dst_ptr), deallocator: .none))
 							return
 						case COMPRESSION_STATUS_ERROR:
 							throw ErrorCases.decode
@@ -173,7 +166,6 @@ internal extension Data {//mapped memory expectation
 				}
 			}
 		}
-		try fileManager.moveItem(at: temporary, to: to)
 	}
 }
 /*
