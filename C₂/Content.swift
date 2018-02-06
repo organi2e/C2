@@ -11,6 +11,6 @@ public class Content: NSManagedObject {
 extension Content {
 	@NSManaged var domain: String
 	@NSManaged var family: String
-	@NSManaged var series: Int
+	@NSManaged var handle: Int
 	@NSManaged var option: [String: Any]
 }

@@ -9,19 +9,18 @@ import CoreImage
 private let imageKey: String = "image"
 private let labelKey: String = "label"
 extension Container {
-	public enum MNIST {
+	public enum MNIST: Series {
 		case train
 		case t10k
-		static var domain: String {
+		public static var domain: String {
 			return String(describing: self)
 		}
-		internal var family: String {
+		public var family: String {
 			return String(describing: self)
 		}
 	}
 	public enum MNISTError: Error {
 		case format
-		case nomatch
 		case entity
 	}
 }
@@ -32,35 +31,42 @@ private extension Container {
 		return(image: baseURL.appendingPathComponent(imageKey),
 			   label: baseURL.appendingPathComponent(labelKey))
 	}
+}
+private extension Container {
 	private func update(mnist: MNIST, context: NSManagedObjectContext, image: URL, label: URL) throws {
-		try context.fetch(domain: MNIST.domain, family: mnist.family).forEach(context.delete)
-		let (imagehead, imagebody): (Data, Data) = try FileHandle(forReadingFrom: image).gunzip().split(cursor: 4 * MemoryLayout<UInt32>.stride)
-		let imageheader: [Int] = imagehead.toArray().map{Int(UInt32(bigEndian: $0))}
-		guard let rows: Int = imageheader[safe: 2], let cols: Int = imageheader[safe: 3] else {
-			throw MNISTError.format
+		try context.fetch(series: mnist).forEach {
+			context.delete($0)
+			try context.save()
 		}
-		let pixels: [Data] = imagebody.chunk(width: Int(rows*cols))
-		let (labelhead, labelbody): (Data, Data) = try FileHandle(forReadingFrom: label).gunzip().split(cursor: 2 * MemoryLayout<UInt32>.stride)
-		let labelheader: [Int] = labelhead.toArray().map{Int(UInt32(bigEndian: $0))}
-		let labels: [UInt8] = labelbody.toArray()
-		guard imageheader[1] == labelheader[1], labels.count == pixels.count else {
-			throw MNISTError.nomatch
+		let labelHandle: FileHandle = try FileHandle(forReadingFrom: label)
+		let imageHandle: FileHandle = try FileHandle(forReadingFrom: image)
+		let labelheader: [UInt32] = try labelHandle.readArray(count: 2).map { UInt32(bigEndian: $0) }
+		let imageheader: [UInt32] = try imageHandle.readArray(count: 4).map { UInt32(bigEndian: $0) }
+		guard
+			let labelcount: UInt32 = labelheader[safe: 1],
+			let imagecount: UInt32 = imageheader[safe: 1],
+			let rows: UInt32 = imageheader[safe: 2],
+			let cols: UInt32 = imageheader[safe: 3], labelcount == imagecount else {
+				throw MNISTError.format
 		}
-		let entityName: String = String(describing: Image.self)
-		try zip(labels, pixels).forEach {
-			guard let image: Image = NSEntityDescription.insertNewObject(forEntityName: entityName, into: context)as?Image else {
+		let count: Int = Int(min(labelcount, imagecount))
+		try Array(repeating: (), count: count).forEach {
+			guard let image: Image = NSManagedObject(entity: Image.entity(), insertInto: context) as? Image else {
 				throw MNISTError.entity
 			}
+			let pixel: Data = try imageHandle.readData(count: Int(rows * cols))
+			let label: UInt8 = try labelHandle.readElement()
+			
 			image.domain = MNIST.domain
 			image.family = mnist.family
-			image.series = Int($0)
+			image.handle = Int(label)
 			image.option = [:]
 			
 			image.height = UInt16(rows)
 			image.width = UInt16(cols)
 			image.rowBytes = UInt32(cols)
-			image.format = kCIFormatR8
-			image.data = $1
+			image.format = kCIFormatA8
+			image.data = pixel
 		}
 		try context.save()
 		notification?.success(build: mnist)
@@ -68,9 +74,10 @@ private extension Container {
 	private func update(mnist: MNIST, image: URL, label: URL) {
 		func dispatch(context: NSManagedObjectContext) {
 			do {
+				let fileManager: FileManager = .default
 				try update(mnist: mnist, context: context, image: image, label: label)
-				try FileManager.default.removeItem(at: image)
-				try FileManager.default.removeItem(at: label)
+				try fileManager.removeItem(at: image)
+				try fileManager.removeItem(at: label)
 			} catch {
 				notification?.failure(error: error)
 			}
@@ -99,19 +106,19 @@ private extension Container {
 }
 private extension Container {
 	@objc private func mnistrain(image mnist: URL) throws {
-		try FileManager.default.moveItem(at: mnist, to: cache(mnist: .train).image)
+		try Data(contentsOf: mnist, options: .mappedIfSafe).gunzip(to: cache(mnist: .train).image)
 		try update(mnist: .train)
 	}
 	@objc private func mnistrain(label mnist: URL) throws {
-		try FileManager.default.moveItem(at: mnist, to: cache(mnist: .train).label)
+		try Data(contentsOf: mnist, options: .mappedIfSafe).gunzip(to: cache(mnist: .train).label)
 		try update(mnist: .train)
 	}
 	@objc private func mnist10k(image mnist: URL) throws {
-		try FileManager.default.moveItem(at: mnist, to: cache(mnist: .t10k).image)
+		try Data(contentsOf: mnist, options: .mappedIfSafe).gunzip(to: cache(mnist: .t10k).image)
 		try update(mnist: .t10k)
 	}
 	@objc private func mnist10k(label mnist: URL) throws {
-		try FileManager.default.moveItem(at: mnist, to: cache(mnist: .t10k).label)
+		try Data(contentsOf: mnist, options: .mappedIfSafe).gunzip(to: cache(mnist: .t10k).label)
 		try update(mnist: .t10k)
 	}
 	private func selector(mnist: MNIST, key: String) throws -> String {
@@ -150,28 +157,6 @@ extension Container {
 		}
 		if stable {
 			try update(mnist: mnist)
-		}
-	}
-}
-private extension Data {
-	func split(cursor: Int) -> (Data, Data) {
-		return(subdata(in: startIndex..<startIndex.advanced(by: cursor)), subdata(in: startIndex.advanced(by: cursor)..<endIndex))
-	}
-	func chunk(width: Int) -> Array<Data> {
-		return stride(from: 0, to: count, by: width).map {
-			return subdata(in: index(startIndex, offsetBy: $0)..<index(startIndex, offsetBy: $0 + width))
-		}
-	}
-	func toArray<T>() -> Array<T> {
-		return withUnsafeBytes {
-			Array<T>(UnsafeBufferPointer<T>(start: $0, count: count / MemoryLayout<T>.stride))
-		}
-	}
-}
-private extension Array {
-	func chunk(width: Int) -> Array<SubSequence> {
-		return stride(from: 0, to: count, by: width).map {
-			return self[$0..<$0+width]
 		}
 	}
 }

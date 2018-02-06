@@ -10,6 +10,10 @@ public protocol Delegate {
 	func failure(error: Error)
 	func success(build: Any)
 }
+public protocol Series {
+	static var domain: String { get }
+	var family: String { get }
+}
 public class Container: NSPersistentContainer {
 	enum ErrorTypes: Error {
 		case model

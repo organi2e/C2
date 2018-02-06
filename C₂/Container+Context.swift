@@ -7,24 +7,30 @@
 import CoreData
 import os.log
 private extension NSManagedObjectContext {
-	private func make(domain: String, family: String) -> NSPredicate {
-		let attributes: [(String, Any)] = [("domain", domain), ("family", family)]
+	private func make(series: Series) -> NSPredicate {
+		let attributes: [(String, Any)] = [("domain", type(of: series).domain), ("family", series.family)]
 		let format: String = attributes.map { "\($0.0) = %@" }.joined(separator: " and ")
 		let arguments: [Any] = attributes.map { $1 }
 		return NSPredicate(format: format, argumentArray: arguments)
 	}
 }
 public extension NSManagedObjectContext {
-	func count<T: Content>(of: T.Type, domain: String, family: String) throws -> Int {
-		let request: NSFetchRequest<T> = NSFetchRequest(entityName: String(describing: T.self))
-		request.predicate = make(domain: domain, family: family)
+	func count(series: Series) throws -> Int {
+		guard let entityName: String = Content.entity().name else {
+			throw ErrorCases.lessdata
+		}
+		let request: NSFetchRequest<Content> = NSFetchRequest(entityName: entityName)
+		request.predicate = make(series: series)
 		return try count(for: request)
 	}
 }
 public extension NSManagedObjectContext {
-	func fetch<T: Content>(domain: String, family: String) throws -> [T] {
-		let request: NSFetchRequest<T> = NSFetchRequest(entityName: String(describing: T.self))
-		request.predicate = make(domain: domain, family: family)
+	func fetch<T: Content>(series: Series) throws -> [T] {
+		guard let entityName: String = T.entity().name else {
+			throw ErrorCases.lessdata
+		}
+		let request: NSFetchRequest<T> = NSFetchRequest(entityName: entityName)
+		request.predicate = make(series: series)
 		return try fetch(request)
 	}
 }

@@ -6,7 +6,34 @@
 //
 import Foundation
 import Compression
+extension FileHandle {
+	func readData(count: Int) throws -> Data {
+		let previous: UInt64 = offsetInFile
+		let data: Data = readData(ofLength: count)
+		guard data.count == count else {
+			seek(toFileOffset: previous)
+			throw ErrorCases.lessdata
+		}
+		return data
+	}
+	func readElement<T>() throws -> T {
+		return try readData(count: MemoryLayout<T>.size).withUnsafeBytes { $0.pointee }
+	}
+	func readArray<T>(count: Int) throws -> [T] {
+		return try readData(count: MemoryLayout<T>.stride * count).withUnsafeBytes { Array(UnsafeBufferPointer(start: $0, count: count)) }
+	}
+	func readString() throws -> String {
+		var array: [CChar] = []
+		func recursive() throws -> [CChar] {
+			let char: CChar = try readElement()
+			return try [char] + ( char == 0 ? [] : recursive() )
+		}
+		return try String(cString: recursive())
+	}
+}
+
 internal enum ErrorCases: Error {
+	case lessdata
 	case NoModelFound(name: String)
 	case NoPlistFound(name: String)
 	case NoEntityFound(name: String)
@@ -34,15 +61,23 @@ internal extension Array {
 internal extension UnsafePointer {
 	mutating func readElement<T>() -> T {
 		defer {
-			self = self.advanced(by: MemoryLayout<T>.stride)
+			self = advanced(by: MemoryLayout<T>.size)
 		}
 		return withMemoryRebound(to: T.self, capacity: 1) {
-			return $0.pointee
+			$0.pointee
+		}
+	}
+	mutating func readArray<T>(count: Int) -> [T] {
+		defer {
+			self = advanced(by: MemoryLayout<T>.stride * count)
+		}
+		return withMemoryRebound(to: T.self, capacity: count) {
+			Array(UnsafeBufferPointer(start: $0, count: count))
 		}
 	}
 	mutating func readData(count: Int) -> Data {
 		defer {
-			self = self.advanced(by: count)
+			self = advanced(by: count)
 		}
 		return Data(bytes: self, count: count)
 	}
@@ -56,16 +91,25 @@ internal extension UnsafePointer {
 	
 }
 internal extension Data {//mapped memory expectation
-	func gunzip(to: FileHandle) throws {//fixed data length -> undeterminant data length
+	func gunzip(to: URL) throws {//fixed data length -> undeterminant data length
+		
+		let fileManager: FileManager = .default
+		let temporary: URL = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+		if !fileManager.fileExists(atPath: temporary.path) {
+			fileManager.createFile(atPath: temporary.path, contents: nil, attributes: nil)
+		}
+		let fileHandle: FileHandle = try FileHandle(forWritingTo: temporary)
 		
 		try withUnsafeBytes { (head: UnsafePointer<UInt8>) in
 			
 			var seek: UnsafePointer<UInt8> = head
 			
 			let magic: UInt16 = seek.readElement()
+			guard head.distance(to: seek) < count else { throw ErrorCases.lessdata }
 			guard magic == 35615 else { throw ErrorCases.InvalidFormat(of: magic, for: "magic") }
 	
 			let method: UInt8 = seek.readElement()
+			guard head.distance(to: seek) < count else { throw ErrorCases.lessdata }
 			guard method == 8 else { throw ErrorCases.InvalidFormat(of: method, for: "method") }
 			
 			let flags: UInt8 = seek.readElement()
@@ -83,16 +127,19 @@ internal extension Data {//mapped memory expectation
 				let bytes: UInt16 = seek.readElement()
 				return seek.readData(count: Int(bytes))
 			}()
+			guard head.distance(to: seek) < count else { throw ErrorCases.lessdata }
 			
 			let original: String = {
 				guard 0 < ( flags & ( 1 << 3 )) else { return "" }
 				return seek.readString()
 			}()
+			guard head.distance(to: seek) < count else { throw ErrorCases.lessdata }
 			
 			let comment: String = {
 				guard 0 < ( flags & ( 1 << 4 )) else { return "" }
 				return seek.readString()
 			}()
+			guard head.distance(to: seek) < count else { throw ErrorCases.lessdata }
 			
 			let capacity: Int = MemoryLayout<compression_stream>.size
 			try Data(capacity: capacity).withUnsafeBytes { (streamref: UnsafePointer<compression_stream>) in
@@ -113,9 +160,9 @@ internal extension Data {//mapped memory expectation
 						stream.pointee.dst_size = size
 						switch compression_stream_process(stream, 0) {
 						case COMPRESSION_STATUS_OK:
-							to.write(Data(bytesNoCopy: cache, count: cache.distance(to: stream.pointee.dst_ptr), deallocator: .none))
+							fileHandle.write(Data(bytesNoCopy: cache, count: cache.distance(to: stream.pointee.dst_ptr), deallocator: .none))
 						case COMPRESSION_STATUS_END:
-							to.write(Data(bytesNoCopy: cache, count: cache.distance(to: stream.pointee.dst_ptr), deallocator: .none))
+							fileHandle.write(Data(bytesNoCopy: cache, count: cache.distance(to: stream.pointee.dst_ptr), deallocator: .none))
 							return
 						case COMPRESSION_STATUS_ERROR:
 							throw ErrorCases.NoEntityFound(name: "")
@@ -126,6 +173,7 @@ internal extension Data {//mapped memory expectation
 				}
 			}
 		}
+		try fileManager.moveItem(at: temporary, to: to)
 	}
 }
 internal extension FileHandle {
@@ -134,36 +182,36 @@ internal extension FileHandle {
 		
 		seek(toFileOffset: 0)
 		
-		let magic: UInt16 = readElement()
+		let magic: UInt16 = try readElement()
 		guard magic == 35615 else { throw ErrorCases.InvalidFormat(of: magic, for: "magic") }
 		
-		let method: UInt8 = readElement()
+		let method: UInt8 = try readElement()
 		guard method == 8 else { throw ErrorCases.InvalidFormat(of: method, for: "method") }
 		
-		let flags: UInt8 = readElement()
+		let flags: UInt8 = try readElement()
 		
-		let time: UInt32 = readElement()
+		let time: UInt32 = try readElement()
 		
-		let extra: UInt8 = readElement()
+		let extra: UInt8 = try readElement()
 		
-		let os: UInt8 = readElement()
+		let os: UInt8 = try readElement()
 		
 		guard flags & ( 1 << 1 ) == 0 else { throw ErrorCases.NoImplemented(feature: "multipart") }
 		
-		let field: Data = {
+		let field: Data = try {
 			guard 0 < ( flags & ( 1 << 2 ) ) else { return Data() }
-			let bytes: UInt16 = readElement()
+			let bytes: UInt16 = try readElement()
 			return readData(ofLength: Int(bytes))
 		}()
 		
-		let original: String = {
+		let original: String = try {
 			guard 0 < ( flags & ( 1 << 3 )) else { return "" }
-			return readString()
+			return try readString()
 		}()
 		
-		let comment: String = {
+		let comment: String = try {
 			guard 0 < ( flags & ( 1 << 4 )) else { return "" }
-			return readString()
+			return try readString()
 		}()
 		
 		let data: Data = readDataToEndOfFile()
@@ -195,18 +243,6 @@ internal extension FileHandle {
 					}
 				}
 			}
-		}
-	}
-	private func readString() -> String {
-		func recursive(fileHandle: FileHandle) -> Array<CChar> {
-			let char: CChar = fileHandle.readElement()
-			return Array<CChar>(arrayLiteral: char) + ( char == 0 ? Array<CChar>() : recursive(fileHandle: fileHandle) )
-		}
-		return String(cString: recursive(fileHandle: self))
-	}
-	private func readElement<T>() -> T {
-		return readData(ofLength: MemoryLayout<T>.size).withUnsafeBytes {
-			$0.pointee
 		}
 	}
 }
