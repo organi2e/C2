@@ -31,6 +31,7 @@ extension Container: URLSessionDownloadDelegate {
 				throw error
 			}
 		} catch {
+			print(error)
 			failure(error: error)
 		}
 	}
