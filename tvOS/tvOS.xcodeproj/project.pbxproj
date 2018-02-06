@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXGroup section */
-		871004D72029B4090047D859 = {
+		87C7BE792029B438004D22A6 = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -16,19 +16,19 @@
 /* End PBXGroup section */
 
 /* Begin PBXProject section */
-		871004D82029B4090047D859 /* Project object */ = {
+		87C7BE7A2029B438004D22A6 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				LastUpgradeCheck = 0920;
 			};
-			buildConfigurationList = 871004DB2029B4090047D859 /* Build configuration list for PBXProject "iOS" */;
+			buildConfigurationList = 87C7BE7D2029B438004D22A6 /* Build configuration list for PBXProject "tvOS" */;
 			compatibilityVersion = "Xcode 8.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
 			);
-			mainGroup = 871004D72029B4090047D859;
+			mainGroup = 87C7BE792029B438004D22A6;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -37,13 +37,13 @@
 /* End PBXProject section */
 
 /* Begin XCBuildConfiguration section */
-		871004DC2029B4090047D859 /* Debug */ = {
+		87C7BE7E2029B438004D22A6 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 			};
 			name = Debug;
 		};
-		871004DD2029B4090047D859 /* Release */ = {
+		87C7BE7F2029B438004D22A6 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 			};
@@ -52,16 +52,16 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		871004DB2029B4090047D859 /* Build configuration list for PBXProject "iOS" */ = {
+		87C7BE7D2029B438004D22A6 /* Build configuration list for PBXProject "tvOS" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				871004DC2029B4090047D859 /* Debug */,
-				871004DD2029B4090047D859 /* Release */,
+				87C7BE7E2029B438004D22A6 /* Debug */,
+				87C7BE7F2029B438004D22A6 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = 871004D82029B4090047D859 /* Project object */;
+	rootObject = 87C7BE7A2029B438004D22A6 /* Project object */;
 }
