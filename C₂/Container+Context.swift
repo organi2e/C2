@@ -17,7 +17,7 @@ private extension NSManagedObjectContext {
 public extension NSManagedObjectContext {
 	func count(series: Series) throws -> Int {
 		guard let entityName: String = Content.entity().name else {
-			throw ErrorCases.lessdata
+			throw Container.ErrorCases.entity
 		}
 		let request: NSFetchRequest<Content> = NSFetchRequest(entityName: entityName)
 		request.predicate = make(series: series)
@@ -27,7 +27,7 @@ public extension NSManagedObjectContext {
 public extension NSManagedObjectContext {
 	func fetch<T: Content>(series: Series) throws -> [T] {
 		guard let entityName: String = T.entity().name else {
-			throw ErrorCases.lessdata
+			throw Container.ErrorCases.entity
 		}
 		let request: NSFetchRequest<T> = NSFetchRequest(entityName: entityName)
 		request.predicate = make(series: series)
