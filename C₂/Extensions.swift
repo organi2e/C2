@@ -153,16 +153,18 @@ internal extension Data {//mapped memory expectation
 				stream.pointee.src_ptr = seek
 				stream.pointee.src_size = count + seek.distance(to: head)
 				let size: Int = compression_decode_scratch_buffer_size(COMPRESSION_ZLIB)
-				try Data(capacity: size).withUnsafeBytes { (cacheref: UnsafePointer<UInt8>) in
+				try Data(count: size).withUnsafeBytes { (cacheref: UnsafePointer<UInt8>) in
 					let cache: UnsafeMutablePointer<UInt8> = UnsafeMutablePointer(mutating: cacheref)
 					while true {
 						stream.pointee.dst_ptr = cache
 						stream.pointee.dst_size = size
 						switch compression_stream_process(stream, 0) {
 						case COMPRESSION_STATUS_OK:
-							fileHandle.write(Data(bytes: cache, count: count))
+                            guard stream.pointee.dst_size == 0 else { continue }
+							fileHandle.write(Data(bytes: cache, count: size))
 						case COMPRESSION_STATUS_END:
-							fileHandle.write(Data(bytes: cache, count: cache.distance(to: stream.pointee.dst_ptr)))
+                            guard cache < stream.pointee.dst_ptr else { continue }
+							fileHandle.write(Data(bytes: cache, count: stream.pointee.dst_ptr - cache))
 							return
 						case COMPRESSION_STATUS_ERROR:
 							throw ErrorCases.decode
