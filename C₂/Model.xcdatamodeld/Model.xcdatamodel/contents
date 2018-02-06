@@ -3,8 +3,8 @@
     <entity name="Content" representedClassName=".Content" isAbstract="YES" syncable="YES">
         <attribute name="domain" attributeType="String" syncable="YES"/>
         <attribute name="family" attributeType="String" syncable="YES"/>
+        <attribute name="handle" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
         <attribute name="option" attributeType="Transformable" syncable="YES"/>
-        <attribute name="series" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
     </entity>
     <entity name="Image" representedClassName=".Image" parentEntity="Content" syncable="YES">
         <attribute name="data" attributeType="Binary" allowsExternalBinaryDataStorage="YES" syncable="YES"/>
@@ -14,7 +14,7 @@
         <attribute name="width" attributeType="Integer 16" minValueString="0" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
     </entity>
     <elements>
-        <element name="Image" positionX="-54" positionY="-9" width="128" height="120"/>
         <element name="Content" positionX="-36" positionY="9" width="128" height="105"/>
+        <element name="Image" positionX="-54" positionY="-9" width="128" height="120"/>
     </elements>
 </model>
