@@ -27,6 +27,6 @@ public extension Image {
 		}
 	}
 	var ciImage: CIImage {
-		return CIImage(bitmapData: data, bytesPerRow: Int(rowBytes), size: size, format: kCIFormatR8, colorSpace: nil)
+		return CIImage(bitmapData: data, bytesPerRow: Int(rowBytes), size: size, format: kCIFormatA8, colorSpace: nil)
 	}
 }
