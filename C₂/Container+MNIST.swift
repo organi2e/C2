@@ -40,26 +40,11 @@ private extension Container {
 			try context.save()
 		}
 		let(imageCache, labelCache): (URL, URL) = try cache(mnist: mnist)
-		let fileManager: FileManager = .default
-		let imageURL: URL = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-		let labelURL: URL = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-		if !fileManager.fileExists(atPath: imageURL.path) {
-			fileManager.createFile(atPath: imageURL.path, contents: nil, attributes: nil)
-		}
-		if !fileManager.fileExists(atPath: labelURL.path) {
-			fileManager.createFile(atPath: labelURL.path, contents: nil, attributes: nil)
-		}
-		let wlabelHandle: FileHandle = try FileHandle(forWritingTo: labelURL)
-		let wimageHandle: FileHandle = try FileHandle(forWritingTo: imageURL)
-		try Data(contentsOf: labelCache, options: .mappedIfSafe).gunzip(to: wlabelHandle)
-		try Data(contentsOf: imageCache, options: .mappedIfSafe).gunzip(to: wimageHandle)
-		wlabelHandle.closeFile()
-		wimageHandle.closeFile()
-		let rlabelHandle: FileHandle = try FileHandle(forReadingFrom: labelURL)
-		let rimageHandle: FileHandle = try FileHandle(forReadingFrom: imageURL)
+		let labelHandle: FileHandle = try FileHandle(forReadingFrom: Data(contentsOf: labelCache, options: .mappedIfSafe).gunzip())
+		let imageHandle: FileHandle = try FileHandle(forReadingFrom: Data(contentsOf: imageCache, options: .mappedIfSafe).gunzip())
 		guard
-			let labelheader: [UInt32] = rlabelHandle.readArray(count: 2),
-			let imageheader: [UInt32] = rimageHandle.readArray(count: 4) else {
+			let labelheader: [UInt32] = labelHandle.readArray(count: 2),
+			let imageheader: [UInt32] = imageHandle.readArray(count: 4) else {
 				throw MNISTError.format
 		}
 		let labelheads: [Int] = labelheader.map { Int(UInt32(bigEndian: $0)) }
@@ -75,8 +60,8 @@ private extension Container {
 		let bytes: Int = rows * cols
 		try Array(repeating: (), count: count).forEach {
 			guard
-				let label: UInt8 = rlabelHandle.readElement(),
-				let pixel: Data = rimageHandle.readData(count: bytes) else {
+				let label: UInt8 = labelHandle.readElement(),
+				let pixel: Data = imageHandle.readData(count: bytes) else {
 					throw MNISTError.format
 			}
 			let image: Image = Image(in: context)
@@ -92,10 +77,8 @@ private extension Container {
 			image.data = pixel
 			try context.save()
 		}
-		rlabelHandle.closeFile()
-		rimageHandle.closeFile()
-		try fileManager.removeItem(at: labelURL)
-		try fileManager.removeItem(at: imageURL)
+		labelHandle.closeFile()
+		imageHandle.closeFile()
 		notification?.success(build: mnist)
 	}
 	private func update(mnist: MNIST) throws {

@@ -16,7 +16,7 @@ class C2Tests: XCTestCase {
 		do {
 			let container: Container = try Container(delegate: self)
 			//			guard try 60000 > container.viewContext.count(of: Image.self, domain: Container.MNIST.domain, family: Container.MNIST.train.family) else {
-			try container.build(mnist: .train)
+			try container.build(series: Container.MNIST.train)
 			wait(for: [trainExp], timeout: 600)
 			//				return
 			//			}

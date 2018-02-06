@@ -81,8 +81,15 @@ internal extension UnsafePointer {
 	}
 }
 internal extension Data {//mapped memory expectation
-	func gunzip(to: FileHandle) throws {//fixed data length -> undeterminant data length
-		
+	func gunzip() throws -> URL {//fixed data length -> undeterminant data length
+		let fileManager: FileManager = .default
+		let url: URL = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+		fileManager.createFile(atPath: url.path, contents: nil, attributes: nil)
+		let fileHandle: FileHandle = try FileHandle(forWritingTo: url)
+		defer {
+			fileHandle.closeFile()
+		}
+		print(url)
 		try withUnsafeBytes { (head: UnsafePointer<UInt8>) in
 			
 			var seek: UnsafePointer<UInt8> = head
@@ -135,7 +142,7 @@ internal extension Data {//mapped memory expectation
 			guard head.distance(to: seek) < count else { throw ErrorCases.lessdata }
 			
 			let capacity: Int = MemoryLayout<compression_stream>.size
-			try Data(capacity: capacity).withUnsafeBytes { (streamref: UnsafePointer<compression_stream>) in
+			try Data(count: capacity).withUnsafeBytes { (streamref: UnsafePointer<compression_stream>) in
 				let stream: UnsafeMutablePointer<compression_stream> = UnsafeMutablePointer(mutating: streamref)
 				guard compression_stream_init(stream, COMPRESSION_STREAM_DECODE, COMPRESSION_ZLIB) == COMPRESSION_STATUS_OK else {
 					return
@@ -153,9 +160,9 @@ internal extension Data {//mapped memory expectation
 						stream.pointee.dst_size = size
 						switch compression_stream_process(stream, 0) {
 						case COMPRESSION_STATUS_OK:
-							to.write(Data(bytesNoCopy: cache, count: cache.distance(to: stream.pointee.dst_ptr), deallocator: .none))
+							fileHandle.write(Data(bytes: cache, count: count))
 						case COMPRESSION_STATUS_END:
-							to.write(Data(bytesNoCopy: cache, count: cache.distance(to: stream.pointee.dst_ptr), deallocator: .none))
+							fileHandle.write(Data(bytes: cache, count: cache.distance(to: stream.pointee.dst_ptr)))
 							return
 						case COMPRESSION_STATUS_ERROR:
 							throw ErrorCases.decode
@@ -166,6 +173,7 @@ internal extension Data {//mapped memory expectation
 				}
 			}
 		}
+		return url
 	}
 }
 /*
