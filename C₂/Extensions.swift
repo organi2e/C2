@@ -17,12 +17,115 @@ internal enum ErrorCases: Error {
 	case NoFileDownload(from: URL)
 	case UnknownError(message: String)
 }
+internal extension NSManagedObject {
+	class var entityName: String {
+		return String(describing: self)
+	}
+}
 internal extension Array {
 	subscript(safe index: Int) -> Element? {
 		guard indices.contains(index) else {
 			return nil
 		}
+		
 		return self[index]
+	}
+}
+internal extension UnsafePointer {
+	mutating func readElement<T>() -> T {
+		defer {
+			self = self.advanced(by: MemoryLayout<T>.stride)
+		}
+		return withMemoryRebound(to: T.self, capacity: 1) {
+			return $0.pointee
+		}
+	}
+	mutating func readData(count: Int) -> Data {
+		defer {
+			self = self.advanced(by: count)
+		}
+		return Data(bytes: self, count: count)
+	}
+	mutating func readString() -> String {
+		func recursive() -> Array<CChar> {
+			let char: CChar = readElement()
+			return [char] + ( char == 0 ? [] : recursive() )
+		}
+		return String(cString: recursive())
+	}
+	
+}
+internal extension Data {//mapped memory expectation
+	func gunzip(to: FileHandle) throws {//fixed data length -> undeterminant data length
+		
+		try withUnsafeBytes { (head: UnsafePointer<UInt8>) in
+			
+			var seek: UnsafePointer<UInt8> = head
+			
+			let magic: UInt16 = seek.readElement()
+			guard magic == 35615 else { throw ErrorCases.InvalidFormat(of: magic, for: "magic") }
+	
+			let method: UInt8 = seek.readElement()
+			guard method == 8 else { throw ErrorCases.InvalidFormat(of: method, for: "method") }
+			
+			let flags: UInt8 = seek.readElement()
+			
+			let time: UInt32 = seek.readElement()
+			
+			let extra: UInt8 = seek.readElement()
+			
+			let os: UInt8 = seek.readElement()
+			
+			guard flags & ( 1 << 1 ) == 0 else { throw ErrorCases.NoImplemented(feature: "multipart") }
+			
+			let field: Data = {
+				guard 0 < ( flags & ( 1 << 2 ) ) else { return Data() }
+				let bytes: UInt16 = seek.readElement()
+				return seek.readData(count: Int(bytes))
+			}()
+			
+			let original: String = {
+				guard 0 < ( flags & ( 1 << 3 )) else { return "" }
+				return seek.readString()
+			}()
+			
+			let comment: String = {
+				guard 0 < ( flags & ( 1 << 4 )) else { return "" }
+				return seek.readString()
+			}()
+			
+			let capacity: Int = MemoryLayout<compression_stream>.size
+			try Data(capacity: capacity).withUnsafeBytes { (streamref: UnsafePointer<compression_stream>) in
+				let stream: UnsafeMutablePointer<compression_stream> = UnsafeMutablePointer(mutating: streamref)
+				guard compression_stream_init(stream, COMPRESSION_STREAM_DECODE, COMPRESSION_ZLIB) == COMPRESSION_STATUS_OK else {
+					return
+				}
+				defer {
+					compression_stream_destroy(stream)
+				}
+				stream.pointee.src_ptr = seek
+				stream.pointee.src_size = count + seek.distance(to: head)
+				let size: Int = compression_decode_scratch_buffer_size(COMPRESSION_ZLIB)
+				try Data(capacity: size).withUnsafeBytes { (cacheref: UnsafePointer<UInt8>) in
+					let cache: UnsafeMutablePointer<UInt8> = UnsafeMutablePointer(mutating: cacheref)
+					while true {
+						stream.pointee.dst_ptr = cache
+						stream.pointee.dst_size = size
+						switch compression_stream_process(stream, 0) {
+						case COMPRESSION_STATUS_OK:
+							to.write(Data(bytesNoCopy: cache, count: cache.distance(to: stream.pointee.dst_ptr), deallocator: .none))
+						case COMPRESSION_STATUS_END:
+							to.write(Data(bytesNoCopy: cache, count: cache.distance(to: stream.pointee.dst_ptr), deallocator: .none))
+							return
+						case COMPRESSION_STATUS_ERROR:
+							throw ErrorCases.NoEntityFound(name: "")
+						default:
+							fatalError()
+						}
+					}
+				}
+			}
+		}
 	}
 }
 internal extension FileHandle {
