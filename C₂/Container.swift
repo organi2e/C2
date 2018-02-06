@@ -24,11 +24,12 @@ public class Container: NSPersistentContainer {
 		case url
 		case cache
 		case implementation
+		case entity
 	}
 	let facility: OSLog
 	let bundle: Bundle
-	let global: [String: [String: [String: URL]]]
 	let cache: URL
+	let state: UserDefaults
 	let notification: Delegate?
 	var urlsession: URLSession
 	init(directory: URL = Container.defaultDirectoryURL(), delegate: Delegate? = nil) throws {
@@ -42,22 +43,7 @@ public class Container: NSPersistentContainer {
 		guard let identifier: String = bundle.bundleIdentifier else {
 			throw ErrorCases.identifier
 		}
-		guard let property: URL = bundle.url(forResource: "Property", withExtension: "plist") else {
-			throw ErrorCases.url
-		}
-		guard let dictionary: [String: [String: [String: String]]] = try PropertyListSerialization.propertyList(from: Data(contentsOf: property), options: [], format: nil)as?[String: [String: [String: String]]] else {
-			throw ErrorCases.dictionary
-		}
-		global = try dictionary.mapValues {
-			try $0.mapValues {
-				try $0.mapValues {
-					guard let url: URL = URL(string: $0) else {
-						throw ErrorCases.url
-					}
-					return url
-				}
-			}
-		}
+		state = UserDefaults()
 		cache = try fileManager.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true).appendingPathComponent(identifier, isDirectory: true)
 		try fileManager.createDirectory(at: cache, withIntermediateDirectories: true, attributes: nil)
 		notification = delegate
@@ -71,6 +57,17 @@ public class Container: NSPersistentContainer {
 			throw error
 		}
 		urlsession = URLSession(configuration: .background(withIdentifier: identifier), delegate: self, delegateQueue: nil)
+	}
+}
+extension Container {
+	func plist(series: Series) throws -> [String: Any] {
+		guard let url: URL = bundle.url(forResource: type(of: series).domain, withExtension: "plist") else {
+			throw ErrorCases.url
+		}
+		guard let dictionary: [String: Any] = try PropertyListSerialization.propertyList(from: Data(contentsOf: url, options: .mappedIfSafe), options: [], format: nil)as?[String: Any] else {
+			throw ErrorCases.dictionary
+		}
+		return dictionary
 	}
 }
 public extension Container {
