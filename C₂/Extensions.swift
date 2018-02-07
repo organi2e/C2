@@ -123,7 +123,7 @@ internal extension FileHandle {
 	}
 }
 internal extension Data {//mapped memory expectation
-	func untar(handle: (String, Data) throws -> Void) rethrows {//fixed data length and split them
+	func untar(handle: (String, Data) throws -> Void) throws {//fixed data length and split them
 		try withUnsafeBytes { (head: UnsafePointer<UInt8>) in
 			var seek: UnsafePointer<UInt8> = head
 			while head.distance(to: seek) < count {
@@ -131,9 +131,10 @@ internal extension Data {//mapped memory expectation
 				let name: String = data.toString()
 				switch data[156] {
 				case 48:
-					let octet: [UInt8] = data[124..<135].toArray()
-					let size: Int = octet.reduce(0) {
-						$0 * 8 + Int($1) - 48
+					let char: [CChar] = data[124..<136].toArray()
+					let byte: String = String(cString: char)
+					guard let size: Int = Int(byte, radix: 8) else {
+						continue
 					}
 					let rounded: Int = 512 * ( ( size + 511 ) / 512 )
 					try handle(name, seek.readData(count: rounded)[0..<size])
