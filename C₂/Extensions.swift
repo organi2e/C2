@@ -19,25 +19,24 @@ extension NSManagedObject {
 	}
 }
 extension FileHandle {
-	func readData(count: Int) -> Data? {
-		let previous: UInt64 = offsetInFile
+	func readData(count: Int) throws -> Data {
 		let data: Data = readData(ofLength: count)
 		guard data.count == count else {
-			seek(toFileOffset: previous)
-			return nil
+			seek(toFileOffset: offsetInFile-UInt64(data.count))
+			throw ErrorCases.lessdata
 		}
 		return data
 	}
-	func readElement<T>() -> T? {
-		return readData(count: MemoryLayout<T>.size)?.withUnsafeBytes { $0.pointee }
+	func readElement<T>() throws -> T {
+		return try readData(count: MemoryLayout<T>.size).withUnsafeBytes { $0.pointee }
 	}
-	func readArray<T>(count: Int) -> [T]? {
-		return readData(count: MemoryLayout<T>.stride * count)?.withUnsafeBytes { Array(UnsafeBufferPointer(start: $0, count: count)) }
+	func readArray<T>(count: Int) throws -> [T] {
+		return try readData(count: MemoryLayout<T>.stride * count).withUnsafeBytes { Array(UnsafeBufferPointer(start: $0, count: count)) }
 	}
 	func readString() -> String {
 		var array: [CChar] = []
 		func recursive() -> [CChar] {
-			guard let char: CChar = readElement(), char != 0 else {
+			guard let char: CChar = try?readElement(), char != 0 else {
 				return []
 			}
 			return [char] + recursive()
@@ -81,15 +80,7 @@ internal extension UnsafePointer {
 	}
 }
 internal extension Data {//mapped memory expectation
-	func gunzip() throws -> URL {//fixed data length -> undeterminant data length
-		let fileManager: FileManager = .default
-		let url: URL = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-		fileManager.createFile(atPath: url.path, contents: nil, attributes: nil)
-		let fileHandle: FileHandle = try FileHandle(forWritingTo: url)
-		defer {
-			fileHandle.closeFile()
-		}
-		print(url)
+	func gunzip(to: FileHandle) throws {//fixed data length -> undeterminant data length
 		try withUnsafeBytes { (head: UnsafePointer<UInt8>) in
 			
 			var seek: UnsafePointer<UInt8> = head
@@ -129,53 +120,43 @@ internal extension Data {//mapped memory expectation
 			}()
 			guard head.distance(to: seek) < count else { throw ErrorCases.lessdata }
 			
-			let original: String = {
-				guard 0 < ( flags & ( 1 << 3 )) else { return "" }
-				return seek.readString()
-			}()
+			let original: String = 0 < ( flags & ( 1 << 3 )) ? seek.readString() : ""
 			guard head.distance(to: seek) < count else { throw ErrorCases.lessdata }
 			
-			let comment: String = {
-				guard 0 < ( flags & ( 1 << 4 )) else { return "" }
-				return seek.readString()
-			}()
+			let comment: String = 0 < ( flags & ( 1 << 4 )) ? seek.readString() : ""
 			guard head.distance(to: seek) < count else { throw ErrorCases.lessdata }
 			
-			let capacity: Int = MemoryLayout<compression_stream>.size
-			try Data(count: capacity).withUnsafeBytes { (streamref: UnsafePointer<compression_stream>) in
-				let stream: UnsafeMutablePointer<compression_stream> = UnsafeMutablePointer(mutating: streamref)
-				guard compression_stream_init(stream, COMPRESSION_STREAM_DECODE, COMPRESSION_ZLIB) == COMPRESSION_STATUS_OK else {
-					return
-				}
-				defer {
-					compression_stream_destroy(stream)
-				}
-				stream.pointee.src_ptr = seek
-				stream.pointee.src_size = count + seek.distance(to: head)
-				let size: Int = compression_decode_scratch_buffer_size(COMPRESSION_ZLIB)
-				try Data(count: size).withUnsafeBytes { (cacheref: UnsafePointer<UInt8>) in
-					let cache: UnsafeMutablePointer<UInt8> = UnsafeMutablePointer(mutating: cacheref)
-					while true {
-						stream.pointee.dst_ptr = cache
-						stream.pointee.dst_size = size
-						switch compression_stream_process(stream, 0) {
-						case COMPRESSION_STATUS_OK:
-                            guard stream.pointee.dst_size == 0 else { continue }
-							fileHandle.write(Data(bytes: cache, count: size))
-						case COMPRESSION_STATUS_END:
-                            guard cache < stream.pointee.dst_ptr else { continue }
-							fileHandle.write(Data(bytes: cache, count: stream.pointee.dst_ptr - cache))
-							return
-						case COMPRESSION_STATUS_ERROR:
-							throw ErrorCases.decode
-						default:
-							fatalError()
-						}
+			//Auto memory management by using NSData in this scope
+			var stream: compression_stream = Data(capacity: MemoryLayout<compression_stream>.size).withUnsafeBytes { $0.pointee }
+			guard compression_stream_init(&stream, COMPRESSION_STREAM_DECODE, COMPRESSION_ZLIB) == COMPRESSION_STATUS_OK else {
+				return
+			}
+			defer {
+				let success: Bool = compression_stream_destroy(&stream) == COMPRESSION_STATUS_OK
+				assert(success)
+			}
+			stream.src_ptr = seek
+			stream.src_size = count - head.distance(to: seek)
+			let size: Int = 65536//should be less than 65537?
+			try Data(capacity: size).withUnsafeBytes { (buffer: UnsafePointer<UInt8>) in
+				while true {
+					stream.dst_ptr = UnsafeMutablePointer(mutating: buffer)
+					stream.dst_size = size
+					switch compression_stream_process(&stream, 0) {
+					case COMPRESSION_STATUS_OK:
+						guard stream.dst_size == 0 else { continue }
+						to.write(Data(bytesNoCopy: UnsafeMutableRawPointer(mutating: buffer), count: buffer.distance(to: stream.dst_ptr), deallocator: .none))
+					case COMPRESSION_STATUS_END:
+						to.write(Data(bytesNoCopy: UnsafeMutableRawPointer(mutating: buffer), count: buffer.distance(to: stream.dst_ptr), deallocator: .none))
+						guard stream.dst_size == 0 else { return }
+					case COMPRESSION_STATUS_ERROR:
+						throw ErrorCases.decode
+					default:
+						fatalError()
 					}
 				}
 			}
 		}
-		return url
 	}
 }
 /*
