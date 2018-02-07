@@ -18,9 +18,6 @@ extension Container {
 		public var family: String {
 			return String(describing: self)
 		}
-		public var predicate: NSPredicate {
-			return NSPredicate(format: "domain = %@ and family = %@", argumentArray: [String(describing: type(of: self)), String(describing: self)])
-		}
 	}
 	public enum MNISTError: Error {
 		case format
@@ -152,9 +149,11 @@ extension Container {
 				let url: URL = URL(string: string) else {
 					throw ErrorCases.url
 			}
-			let downloadTask: URLSessionDownloadTask = urlsession.downloadTask(with: url)
-			downloadTask.taskDescription = try selector(mnist: mnist, key: $1.1)
-			downloadTask.resume()
+			if !isDownloading(url: url) {
+				let downloadTask: URLSessionDownloadTask = download(url: url)
+				downloadTask.taskDescription = try selector(mnist: mnist, key: $1.1)
+				downloadTask.resume()
+			}
 			return false
 		}
 		if stable {
