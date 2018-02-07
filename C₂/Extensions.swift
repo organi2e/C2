@@ -123,7 +123,7 @@ internal extension FileHandle {
 	}
 }
 internal extension Data {//mapped memory expectation
-	func untar(handle: (String, Data) throws -> Void) rethrows {
+	func untar(handle: (String, Data) throws -> Void) rethrows {//fixed data length and split them
 		try withUnsafeBytes { (head: UnsafePointer<UInt8>) in
 			var seek: UnsafePointer<UInt8> = head
 			while head.distance(to: seek) < count {
