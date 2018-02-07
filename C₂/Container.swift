@@ -6,13 +6,13 @@
 //
 import CoreData
 import os.log
-public protocol Delegate {
-	func failure(error: Error)
-	func success(build: Any)
-}
 public protocol Series {
 	static var domain: String { get }
 	var family: String { get }
+}
+public protocol Delegate {
+	func failure(error: Error)
+	func success(build: Series)
 }
 public class Container: NSPersistentContainer {
 	enum ErrorCases: Error {
@@ -29,9 +29,9 @@ public class Container: NSPersistentContainer {
 	let facility: OSLog
 	let bundle: Bundle
 	let cache: URL
-	let state: UserDefaults
 	let notification: Delegate?
-	var urlsession: URLSession
+	private let state: UserDefaults
+	private var urlsession: URLSession
 	init(directory: URL = Container.defaultDirectoryURL(), delegate: Delegate? = nil) throws {
 		let fileManager: FileManager = .default
 		let myClass: AnyClass = type(of: self)
@@ -60,6 +60,34 @@ public class Container: NSPersistentContainer {
 	}
 }
 extension Container {
+	public func download(url: URL) -> URLSessionDownloadTask {
+		defer {
+			state.set(true, forKey: url.absoluteString)
+		}
+		return urlsession.downloadTask(with: url)
+	}
+	public func isDownloading(url: URL) -> Bool {
+		return state.bool(forKey: url.absoluteString)
+	}
+}
+extension Container: URLSessionDelegate {
+	public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+		do {
+			guard let url: URL = task.originalRequest?.url else {
+				throw ErrorCases.url
+			}
+			defer {
+				state.set(false, forKey: url.absoluteString)
+			}
+			if let error: Error = error {
+				throw error
+			}
+		} catch {
+			failure(error: error)
+		}
+	}
+}
+extension Container {
 	func plist(series: Series) throws -> [String: Any] {
 		guard let url: URL = bundle.url(forResource: type(of: series).domain, withExtension: "plist") else {
 			throw ErrorCases.url
@@ -75,13 +103,15 @@ public extension Container {
 		switch series {
 		case let mnist as MNIST:
 			try build(mnist: mnist)
+		case let cifar10 as CIFAR10:
+			try build(cifar10: cifar10)
 		default:
 			throw ErrorCases.implementation
 		}
 	}
 }
 internal extension Container {
-	func success(with: Any, function: String = #function) {
+	func success(with: Series, function: String = #function) {
 		if let notification: Delegate = notification {
 			notification.success(build: with)
 		} else {
