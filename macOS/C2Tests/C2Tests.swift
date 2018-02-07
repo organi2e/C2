@@ -9,25 +9,22 @@ import XCTest
 @testable import C2
 
 class C2Tests: XCTestCase {
-    let trainExp: XCTestExpectation = XCTestExpectation(description: "train")
-    let container: Container = try!Container()
-    /*
-     //override func setUp() {
-     func testEX() {
-     //        super.setUp()
-     do {
-     let container: Container = try Container(delegate: self)
-     //            guard try 60000 > container.viewContext.count(of: Image.self, domain: Container.MNIST.domain, family: Container.MNIST.train.family) else {
-     try container.build(series: Container.MNIST.train)
-     wait(for: [trainExp], timeout: 600)
-     //                return
-     //            }
-     } catch {
-     XCTFail(String(describing: error))
-     }
-     }
-     */
-    
+	let build: XCTestExpectation = XCTestExpectation(description: "build")
+	var container: Container!
+	override func setUp() {
+		super.setUp()
+		do {
+			container = try Container(delegate: self)
+			try container.build(series: Container.CIFAR10.batch1)
+			wait(for: [build], timeout: 60 * 30)
+		} catch {
+			XCTFail(String(describing: error))
+		}
+	}
+	func testMNIST() {
+		
+	}
+	/*
     func testContainer() {
         do {
             let images: [Image] = try container.viewContext.fetch(series: Container.MNIST.train)
@@ -43,13 +40,15 @@ class C2Tests: XCTestCase {
             XCTFail(String(describing: error))
         }
     }
+	*/
 }
 extension C2Tests: C2.Delegate {
-    func success(build: Any) {
-        print(build)
-        switch build {
-        case C2.Container.MNIST.train:
-            trainExp.fulfill()
+    func success(build x: Series) {
+        switch x {
+		case is Container.MNIST:
+            build.fulfill()
+		case is Container.CIFAR10:
+			build.fulfill()
         default:
             break
         }

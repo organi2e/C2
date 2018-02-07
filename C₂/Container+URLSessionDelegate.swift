@@ -7,15 +7,6 @@
 import Foundation
 import os.log
 extension Container: URLSessionDownloadDelegate {
-	public func urlSession(_ session: URLSession, didBecomeInvalidWithError error: Error?) {
-		do {
-			if let error: Error = error {
-				throw error
-			}
-		} catch {
-			failure(error: error)
-		}
-	}
 	public func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
 		do {
 			guard let description: String = downloadTask.taskDescription else {
@@ -25,13 +16,17 @@ extension Container: URLSessionDownloadDelegate {
 			guard responds(to: selector) else {
 				throw ErrorCases.selector
 			}
-			let error: NSErrorPointer = NSErrorPointer(nilLiteral: ())
-			perform(selector, with: location, with: error)
-			if let error: Error = error?.pointee {
-				throw error
+			try autoreleasepool {
+				let error: NSErrorPointer = NSErrorPointer(nilLiteral: ())
+				let result: Unmanaged<AnyObject> = perform(selector, with: location, with: error)
+				defer {
+					result.release()
+				}
+				if let error: Error = error?.pointee {
+					throw error
+				}
 			}
 		} catch {
-			print(error)
 			failure(error: error)
 		}
 	}
