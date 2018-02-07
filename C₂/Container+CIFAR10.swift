@@ -54,16 +54,20 @@ private extension Container {
 		do {
 			try Data(contentsOf: cachecifar10, options: .mappedIfSafe).gunzip(to: FileHandle(forWritingTo: cifar10))
 		}
+		var labels: [UInt8: String] = [:]
 		try Data(contentsOf: cifar10, options: .mappedIfSafe).untar {
 			switch $0 {
 			case batch1:
 				break
 			case meta:
-				print($1, meta)
+				String(data: $1, encoding: .utf8)?.components(separatedBy: .newlines).enumerated().forEach {
+					labels.updateValue($1, forKey: UInt8($0))
+				}
 			default:
 				break
 			}
 		}
+		print(labels)
 		
 	}
 }
