@@ -36,16 +36,9 @@ private extension Container {
 			context.delete($0)
 			try context.save()
 		}
-		let fileManager: FileManager = .default
 		let (imageCache, labelCache): (URL, URL) = try cache(mnist: mnist)
-		let label: URL = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-		let image: URL = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-		guard fileManager.createFile(atPath: label.path, contents: nil, attributes: nil) else { throw ErrorCases.cache }; defer { try?fileManager.removeItem(at: label) }
-		guard fileManager.createFile(atPath: image.path, contents: nil, attributes: nil) else { throw ErrorCases.cache }; defer { try?fileManager.removeItem(at: image) }
-		let labelHandle: FileHandle = try FileHandle(forUpdating: label); defer { labelHandle.closeFile() }
-		let imageHandle: FileHandle = try FileHandle(forUpdating: image); defer { imageHandle.closeFile() }
-		try Data(contentsOf: labelCache, options: .mappedIfSafe).gunzip(to: labelHandle); labelHandle.seek(toFileOffset: 0)
-		try Data(contentsOf: imageCache, options: .mappedIfSafe).gunzip(to: imageHandle); imageHandle.seek(toFileOffset: 0)
+		let imageHandle: Gunzip = try Gunzip(url: imageCache)
+		let labelHandle: Gunzip = try Gunzip(url: labelCache)
 		let labelheader: [UInt32] = try labelHandle.readArray(count: 2)
 		let imageheader: [UInt32] = try imageHandle.readArray(count: 4)
 		let labelheads: [Int] = labelheader.map { Int(UInt32(bigEndian: $0)) }
@@ -61,7 +54,7 @@ private extension Container {
 		let count: Int = min(labelcount, imagecount)
 		let bytes: Int = rows * cols
 		try Array(repeating: (), count: count).forEach {
-			let label: UInt8 = try labelHandle.readElement()
+			let label: UInt8 = try labelHandle.readValue()
 			let pixel: Data = try imageHandle.readData(count: bytes)
 			let image: Image = Image(in: context)
 			image.domain = MNIST.domain
