@@ -22,6 +22,7 @@
 		875432302029AF74006D00C4 /* Container+Context.swift in Sources */ = {isa = PBXBuildFile; fileRef = 875432262029AF74006D00C4 /* Container+Context.swift */; };
 		875432312029AF74006D00C4 /* Content.swift in Sources */ = {isa = PBXBuildFile; fileRef = 875432272029AF74006D00C4 /* Content.swift */; };
 		877087E52029C2DE00C60994 /* CIFAR10.plist in Resources */ = {isa = PBXBuildFile; fileRef = 877087E42029C2DE00C60994 /* CIFAR10.plist */; };
+		87D7EFB9202C62C100586280 /* Untar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87D7EFB8202C62C100586280 /* Untar.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -53,6 +54,7 @@
 		875432262029AF74006D00C4 /* Container+Context.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = "Container+Context.swift"; path = "../../C₂/Container+Context.swift"; sourceTree = "<group>"; };
 		875432272029AF74006D00C4 /* Content.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Content.swift; path = "../../C₂/Content.swift"; sourceTree = "<group>"; };
 		877087E42029C2DE00C60994 /* CIFAR10.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = CIFAR10.plist; path = "../../C₂/CIFAR10.plist"; sourceTree = "<group>"; };
+		87D7EFB8202C62C100586280 /* Untar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Untar.swift; path = "../../C₂/Untar.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -103,6 +105,7 @@
 				8754321E2029AF74006D00C4 /* Container+MNIST.swift */,
 				8754321F2029AF74006D00C4 /* Container+CIFAR10.swift */,
 				873FF74D202B70EE0035B234 /* Gunzip.swift */,
+				87D7EFB8202C62C100586280 /* Untar.swift */,
 				875432252029AF74006D00C4 /* Extensions.swift */,
 				875432212029AF74006D00C4 /* Model.xcdatamodeld */,
 				8754321D2029AF73006D00C4 /* MNIST.plist */,
@@ -237,6 +240,7 @@
 				8754322A2029AF74006D00C4 /* Container+CIFAR10.swift in Sources */,
 				8754322E2029AF74006D00C4 /* Container.swift in Sources */,
 				8754322B2029AF74006D00C4 /* Image.swift in Sources */,
+				87D7EFB9202C62C100586280 /* Untar.swift in Sources */,
 				875432292029AF74006D00C4 /* Container+MNIST.swift in Sources */,
 				873FF74E202B70EE0035B234 /* Gunzip.swift in Sources */,
 				8754322C2029AF74006D00C4 /* Model.xcdatamodeld in Sources */,

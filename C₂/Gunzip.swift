@@ -73,11 +73,7 @@ internal class Gunzip {
 			whole = data.advanced(by: seek)
 			
 			buffer = Data()
-			stream = compression_stream(dst_ptr: cache.withUnsafeBytes{UnsafeMutablePointer(mutating: $0)},
-										dst_size: cache.count,
-										src_ptr: whole.withUnsafeBytes{$0},
-										src_size: whole.count,
-										state: nil)
+			stream = compression_stream(dst_ptr: cache.withUnsafeBytes{UnsafeMutablePointer(mutating: $0)}, dst_size: cache.count, src_ptr: whole.withUnsafeBytes{$0}, src_size: whole.count, state: nil)
 			
 			guard compression_stream_init(&stream, COMPRESSION_STREAM_DECODE, COMPRESSION_ZLIB) == COMPRESSION_STATUS_OK else {
 				throw ErrorCases.stream
@@ -124,5 +120,9 @@ extension Gunzip: Supplier {
 			buffer.removeSubrange(0..<count)
 		}
 		return buffer.subdata(in: buffer.startIndex..<buffer.startIndex.advanced(by: count))
+	}
+	func reset() {
+		stream.src_ptr = whole.withUnsafeBytes { $0 }
+		stream.src_size = whole.count
 	}
 }
