@@ -31,6 +31,7 @@ public extension NSManagedObjectContext {
 		}
 		let request: NSFetchRequest<T> = NSFetchRequest(entityName: entityName)
 		request.predicate = make(series: series)
+		request.returnsObjectsAsFaults = true
 		return try fetch(request)
 	}
 }
