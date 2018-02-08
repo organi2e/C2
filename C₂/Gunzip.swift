@@ -59,12 +59,10 @@ internal class Gunzip {
 			seek += 0 == ( flags & ( 1 << 2 ) ) ? 0 : ( field.count + MemoryLayout<UInt16>.size )
 			guard seek < data.count else { throw ErrorCases.lessdata }
 			
-			guard seek < data.count else { throw ErrorCases.lessdata }
 			let original: String = 0 == ( flags & ( 1 << 3 ) ) ? "" : data.advanced(by: seek).toString()
 			seek += 0 == ( flags & ( 1 << 3 ) ) ? 0 : ( original.count + 1 )
 			guard seek < data.count else { throw ErrorCases.lessdata }
 			
-			guard seek < data.count else { throw ErrorCases.lessdata }
 			let comment: String = 0 == ( flags & ( 1 << 4 ) ) ? "" : data.advanced(by: seek).toString()
 			seek += 0 == ( flags & ( 1 << 4 ) ) ? 0 : ( comment.count + 1 )
 			guard seek < data.count else { throw ErrorCases.lessdata }
