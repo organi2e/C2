@@ -18,6 +18,7 @@ protocol Supplier {
 	func readData(count: Int) throws -> Data
 	func readValue<T: Strideable>() throws -> T
 	func readArray<T: Strideable>(count: Int) throws -> [T]
+	func reset()
 }
 extension NSManagedObject {
 	convenience init(in context: NSManagedObjectContext) {
@@ -48,6 +49,9 @@ extension FileHandle: Supplier {
 			return [char] + recursive()
 		}
 		return String(cString: recursive())
+	}
+	func reset() {
+		seek(toFileOffset: 0)
 	}
 }
 internal extension Array {
