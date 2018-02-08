@@ -6,7 +6,7 @@
 //
 import Foundation
 import Compression
-internal class Gunzip {
+internal struct Gunzip {
     enum ErrorCases: Error {
         case lessdata
     }
@@ -22,7 +22,7 @@ internal class Gunzip {
     }
 }
 extension Gunzip {
-    func feed(byte: Int) throws -> Data {
+    mutating func feed(byte: Int) throws -> Data {
         return Data()
     }
 }
