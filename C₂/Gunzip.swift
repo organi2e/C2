@@ -16,9 +16,9 @@ internal class Gunzip {
 	}
 	let cache: Data
 	let whole: Data
-	var stream: compression_stream
 	var buffer: Data
-	init(url: URL, options: Data.ReadingOptions = .alwaysMapped, cache bytes: Int = 65536) throws {
+	var stream: compression_stream
+	init(url: URL, options: Data.ReadingOptions = .mappedRead, cache bytes: Int = 65536) throws {
 		
 		let data = try Data(contentsOf: url, options: options)
 		
