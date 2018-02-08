@@ -14,12 +14,23 @@ internal enum ErrorCases: Error {
 	case decode
 	case format
 }
+protocol Supplier {
+	func readData(count: Int) throws -> Data
+	func readValue<T: Strideable>() throws -> T
+	func readArray<T: Strideable>(count: Int) throws -> [T]
+}
 extension NSManagedObject {
 	convenience init(in context: NSManagedObjectContext) {
 		self.init(entity: type(of: self).entity(), insertInto: context)
 	}
 }
-extension FileHandle {
+extension FileHandle: Supplier {
+	func readValue<T: Strideable>() throws -> T {
+		return try readData(count: MemoryLayout<T>.size).withUnsafeBytes { $0.pointee }
+	}
+	func readArray<T: Strideable>(count: Int) throws -> [T] {
+		return try readData(count: MemoryLayout<T>.stride * count).withUnsafeBytes { Array(UnsafeBufferPointer(start: $0, count: count)) }
+	}
 	func readData(count: Int) throws -> Data {
 		let data: Data = readData(ofLength: count)
 		guard data.count == count else {
@@ -28,16 +39,10 @@ extension FileHandle {
 		}
 		return data
 	}
-	func readElement<T>() throws -> T {
-		return try readData(count: MemoryLayout<T>.size).withUnsafeBytes { $0.pointee }
-	}
-	func readArray<T>(count: Int) throws -> [T] {
-		return try readData(count: MemoryLayout<T>.stride * count).withUnsafeBytes { Array(UnsafeBufferPointer(start: $0, count: count)) }
-	}
 	func readString() -> String {
 		var array: [CChar] = []
 		func recursive() -> [CChar] {
-			guard let char: CChar = try?readElement(), char != 0 else {
+			guard let char: CChar = try?readValue(), char != 0 else {
 				return []
 			}
 			return [char] + recursive()
@@ -81,24 +86,27 @@ internal extension UnsafePointer {
 	}
 }
 internal extension Data {
-	func toElement<T>() -> T {
+	func toValue<T>() -> T {
 		return withUnsafeBytes { $0.pointee }
 	}
+	func toArray<T>(count: Int) -> [T] {
+		return withUnsafeBytes { Array(UnsafeBufferPointer(start: $0, count: count)) }
+	}
 	func toArray<T>() -> [T] {
-		return withUnsafeBytes { Array(UnsafeBufferPointer(start: $0, count: count / MemoryLayout<T>.stride)) }
+		return toArray(count: count / MemoryLayout<T>.stride)
 	}
 	func toString() -> String {
 		return withUnsafeBytes { String(cString: UnsafePointer<CChar>($0)) }
 	}
-	func split(position: Int) -> (Data, Data) {
-		let cursor: Index = index(startIndex, offsetBy: position)
-		return(subdata(in: startIndex..<cursor), subdata(in: cursor..<endIndex))
+	func toBuffer<T: UnsignedInteger>(size: T.Type) -> Data {
+		let byte: T = toValue()
+		return advanced(by: MemoryLayout<T>.stride)[0..<Int(byte)]
 	}
 	subscript(index: Int) -> UInt8 {
 		return advanced(by: index).withUnsafeBytes { $0.pointee }
 	}
 	subscript(range: Range<Int>) -> Data {
-		return subdata(in: index(startIndex, offsetBy: range.lowerBound)..<index(startIndex, offsetBy: range.upperBound))
+		return subdata(in: startIndex.advanced(by: range.lowerBound)..<startIndex.advanced(by: range.upperBound))
 	}
 }
 internal extension FileHandle {
