@@ -6,9 +6,6 @@
 //
 import Foundation
 import Compression
-extension String: Error {
-	
-}
 private extension Data {
 	func gunzip(to: OutputStream, with: Int) throws {
 		try withUnsafeBytes { (src: UnsafePointer<UInt8>) in
@@ -132,7 +129,6 @@ class Gunzip {
 				}
 				try?data.advanced(by: seek).gunzip(to: ost, with: 65536)
 			}
-			thread.name = "gunzip"
 		}
 		nslock = NSLock()
 		stream = ist
@@ -146,7 +142,7 @@ class Gunzip {
 		stream.close()
 	}
 }
-extension Gunzip {
+extension Gunzip: Supplier {
 	func readValue<T: Strideable>() throws -> T {
 		return try readData(count: MemoryLayout<T>.stride).withUnsafeBytes { $0.pointee }
 	}
