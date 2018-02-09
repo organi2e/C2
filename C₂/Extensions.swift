@@ -6,19 +6,13 @@
 //
 import Foundation
 import Compression
-internal enum ErrorCases: Error {
-	case lessdata
-	case multipart
-	case method
-	case magic
-	case decode
-	case format
+extension String: Error {
+	
 }
 protocol Supplier {
 	func readData(count: Int) throws -> Data
 	func readValue<T: Strideable>() throws -> T
 	func readArray<T: Strideable>(count: Int) throws -> [T]
-	func reset()
 }
 extension NSManagedObject {
 	convenience init(in context: NSManagedObjectContext) {
@@ -36,7 +30,7 @@ extension FileHandle: Supplier {
 		let data: Data = readData(ofLength: count)
 		guard data.count == count else {
 			seek(toFileOffset: offsetInFile-UInt64(data.count))
-			throw ErrorCases.lessdata
+			throw "less data"
 		}
 		return data
 	}
@@ -49,9 +43,6 @@ extension FileHandle: Supplier {
 			return [char] + recursive()
 		}
 		return String(cString: recursive())
-	}
-	func reset() {
-		seek(toFileOffset: 0)
 	}
 }
 internal extension Array {
@@ -113,10 +104,11 @@ internal extension Data {
 		return subdata(in: startIndex.advanced(by: range.lowerBound)..<startIndex.advanced(by: range.upperBound))
 	}
 }
+/*
 internal extension FileHandle {
 	func untar(handler: (String, Data) throws -> ()) throws {
 		guard let base: UInt32 = "0".unicodeScalars.first?.value else {
-			throw ErrorCases.decode
+			throw "decoding"
 		}
 		while let head: Data = try?readData(count: 512) {
 			let name: String = head.toString()
@@ -237,6 +229,7 @@ internal extension Data {//mapped memory expectation
 		}
 	}
 }
+*/
 /*
 internal extension FileHandle {
 	//reference: http://www.onicos.com/staff/iz/formats/gzip.html
