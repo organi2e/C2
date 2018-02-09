@@ -37,8 +37,8 @@ private extension Container {
 			try context.save()
 		}
 		let (imageCache, labelCache): (URL, URL) = try cache(mnist: mnist)
-		let imageHandle: Gunzip = try Gunzip(url: imageCache)
-		let labelHandle: Gunzip = try Gunzip(url: labelCache)
+		let imageHandle: Gunzip = try Gunzip(url: imageCache, maximum: 1024)
+		let labelHandle: Gunzip = try Gunzip(url: labelCache, maximum: 1024)
 		let labelheader: [UInt32] = try labelHandle.readArray(count: 2)
 		let imageheader: [UInt32] = try imageHandle.readArray(count: 4)
 		let labelheads: [Int] = labelheader.map { Int(UInt32(bigEndian: $0)) }
