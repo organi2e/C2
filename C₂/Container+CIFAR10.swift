@@ -52,8 +52,10 @@ private extension Container {
 			try?fileManager.removeItem(at: cifar10)
 		}
 		do {
-			try Data(contentsOf: cachecifar10, options: .mappedIfSafe).gunzip(to: FileHandle(forWritingTo: cifar10))
+			
+			//try Data(contentsOf: cachecifar10, options: .mappedIfSafe).gunzip(to: FileHandle(forWritingTo: cifar10))
 		}
+		/*
 		var labels: [UInt8: String] = [:]
 		try Data(contentsOf: cifar10, options: .mappedIfSafe).untar {
 			switch $0 {
@@ -68,6 +70,7 @@ private extension Container {
 			}
 		}
 		print(labels)
+		*/
 		
 	}
 }
