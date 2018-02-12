@@ -15,7 +15,7 @@ class C2Tests: XCTestCase {
 		super.setUp()
 		do {
 			container = try Container(delegate: self)
-			try container.build(series: Container.MNIST.train)
+			try container.build(series: Container.CIFAR10.test)
 			wait(for: [build], timeout: 60 * 30)
 		} catch {
 			XCTFail(String(describing: error))

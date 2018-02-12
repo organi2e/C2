@@ -34,35 +34,76 @@ private extension Container {
 	}
 }
 private extension Container {
-	private func buildcifar10() throws {
+	private func buildcifar10(context: NSManagedObjectContext, rows: Int, cols: Int, family: String, data: Data) throws {
+		try data.chunk(width: rows * cols * 3 + 1).forEach {
+			let head: UInt8 = $0.toValue()
+			let tail: Data = $0[1..<$0.count]
+			guard tail.count == rows * cols * 3 else {
+				throw "dummy"
+			}
+			let height: vImagePixelCount = vImagePixelCount(rows)
+			let width: vImagePixelCount = vImagePixelCount(cols)
+			let rowBytes: Int = 4 * cols
+			let image: Image = Image(in: context)
+			image.domain = CIFAR10.domain
+			image.family = family
+			image.option = [:]
+			image.handle = Int(head)
+			image.width = UInt16(width)
+			image.height = UInt16(height)
+			image.rowBytes = UInt32(rowBytes)
+			image.format = kCIFormatRGBA8
+			image.data = Data(count: rowBytes * Int(height))
+			image.data.withUnsafeMutableBytes { (data: UnsafeMutablePointer<UInt8>) in
+				let result: vImage_Error = tail.withUnsafeBytes {
+					vImageConvert_Planar8ToBGRX8888([vImage_Buffer(data: UnsafeMutablePointer<UInt8>(mutating: $0).advanced(by: 2*Int(height*width)), height: height, width: width, rowBytes: rowBytes)],
+																			   [vImage_Buffer(data: UnsafeMutablePointer<UInt8>(mutating: $0).advanced(by: 1*Int(height*width)), height: height, width: width, rowBytes: rowBytes)],
+																			   [vImage_Buffer(data: UnsafeMutablePointer<UInt8>(mutating: $0).advanced(by: 0*Int(height*width)), height: height, width: width, rowBytes: rowBytes)],
+																			   255,
+																			   [vImage_Buffer(data: data, height: height, width: width, rowBytes: rowBytes)],
+																			   0)
+				}
+				assert(result == kvImageNoError)
+			}
+		}
+	}
+	private func buildcifar10(context: NSManagedObjectContext) throws {
 		let dictionary: [String: Any] = try plist(series: CIFAR10.test)
 		guard
 			let rows: Int = dictionary[rowsKey]as?Int,
 			let cols: Int = dictionary[colsKey]as?Int,
 			let batch1: String = dictionary[CIFAR10.batch1.family]as?String,
+			let batch2: String = dictionary[CIFAR10.batch2.family]as?String,
+			let batch3: String = dictionary[CIFAR10.batch3.family]as?String,
+			let batch4: String = dictionary[CIFAR10.batch4.family]as?String,
+			let batch5: String = dictionary[CIFAR10.batch5.family]as?String,
+			let batch6: String = dictionary[CIFAR10.batch6.family]as?String,
+			let test: String = dictionary[CIFAR10.test.family]as?String,
 			let meta: String = dictionary[metaKey]as?String else {
 				throw ErrorCases.dictionary
 		}
-		let fileManager: FileManager = .default
-		let cifar10: URL = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-		guard fileManager.createFile(atPath: cifar10.path, contents: nil, attributes: nil) else {
-			throw ErrorCases.cache
-		}
-		defer {
-			try?fileManager.removeItem(at: cifar10)
-		}
-		do {
-			
-			//try Data(contentsOf: cachecifar10, options: .mappedIfSafe).gunzip(to: FileHandle(forWritingTo: cifar10))
-		}
-		/*
 		var labels: [UInt8: String] = [:]
-		try Data(contentsOf: cifar10, options: .mappedIfSafe).untar {
+		try Untar(supplier: Gunzip(url: cachecifar10, options: .mappedRead, maximum: rows * cols * MemoryLayout<UInt8>.stride * 4)).scan {
 			switch $0 {
 			case batch1:
-				break
+				try buildcifar10(context: context, rows: rows, cols: cols, family: CIFAR10.batch1.family, data: $1)
+			case batch2:
+				try buildcifar10(context: context, rows: rows, cols: cols, family: CIFAR10.batch2.family, data: $1)
+			case batch3:
+				try buildcifar10(context: context, rows: rows, cols: cols, family: CIFAR10.batch3.family, data: $1)
+			case batch4:
+				try buildcifar10(context: context, rows: rows, cols: cols, family: CIFAR10.batch4.family, data: $1)
+			case batch5:
+				try buildcifar10(context: context, rows: rows, cols: cols, family: CIFAR10.batch5.family, data: $1)
+			case batch6:
+				try buildcifar10(context: context, rows: rows, cols: cols, family: CIFAR10.batch6.family, data: $1)
+			case test:
+				try buildcifar10(context: context, rows: rows, cols: cols, family: CIFAR10.test.family, data: $1)
 			case meta:
-				String(data: $1, encoding: .utf8)?.components(separatedBy: .newlines).enumerated().forEach {
+				guard let text: String = String(data: $1, encoding: .utf8) else {
+					throw "meta file is wrong"
+				}
+				text.components(separatedBy: .newlines).filter { !$0.isEmpty }.enumerated().forEach {
 					labels.updateValue($1, forKey: UInt8($0))
 				}
 			default:
@@ -70,8 +111,16 @@ private extension Container {
 			}
 		}
 		print(labels)
-		*/
-		
+	}
+	func buildcifar10() throws {
+		func dispatch(context: NSManagedObjectContext) {
+			do {
+				try buildcifar10(context: context)
+			} catch {
+				
+			}
+		}
+		performBackgroundTask(dispatch)
 	}
 }
 private extension Container {
@@ -99,3 +148,11 @@ public extension Container {
 		}
 	}
 }
+private extension Data {
+	func chunk(width: Int) -> [Data] {
+		return stride(from: 0, to: count, by: width).map {
+			subdata(in: $0..<$0 + width)
+		}
+	}
+}
+
