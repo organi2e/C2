@@ -43,11 +43,11 @@ public class Container: NSPersistentContainer {
 		guard let identifier: String = bundle.bundleIdentifier else {
 			throw ErrorCases.identifier
 		}
-		state = UserDefaults()
 		cache = try fileManager.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true).appendingPathComponent(identifier, isDirectory: true)
 		try fileManager.createDirectory(at: cache, withIntermediateDirectories: true, attributes: nil)
 		notification = delegate
 		urlsession = .shared
+		state = UserDefaults()
 		super.init(name: identifier, managedObjectModel: model)
 		var error: Error?
 		loadPersistentStores {
