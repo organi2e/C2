@@ -31,11 +31,7 @@ private extension Container {
 	}
 }
 private extension Container {
-	private func update(mnist: MNIST, context: NSManagedObjectContext) throws {
-		try context.fetch(series: mnist).forEach {
-			context.delete($0)
-			try context.save()
-		}
+	private func rebuild(mnist: MNIST, context: NSManagedObjectContext) throws {
 		let (imageCache, labelCache): (URL, URL) = try cache(mnist: mnist)
 		let imageHandle: Gunzip = try Gunzip(url: imageCache, maximum: 1024)
 		let labelHandle: Gunzip = try Gunzip(url: labelCache, maximum: 1024)
@@ -48,33 +44,44 @@ private extension Container {
 			let imagecount: Int = imageheads[safe: 1],
 			let rows: Int = imageheads[safe: 2],
 			let cols: Int = imageheads[safe: 3], labelcount == imagecount else {
-				throw MNISTError.format
+				throw "error"
 		}
-		
+		try context.index(series: mnist).forEach {
+			context.delete($0)
+			try context.save()
+		}
 		let count: Int = min(labelcount, imagecount)
 		let bytes: Int = rows * cols
-		try Array(repeating: (), count: count).forEach {
+		let images: [UInt8: Set<Image>] = try [Void](repeating: (), count: count).reduce([UInt8: Set<Image>]()) {
+			let _: Void = $1 //gabage
 			let label: UInt8 = try labelHandle.readValue()
-			let pixel: Data = try imageHandle.readData(count: bytes)
 			let image: Image = Image(in: context)
-			image.domain = MNIST.domain
-			image.family = mnist.family
-			image.handle = Int(label)
-			image.option = [:]
-			
-			image.height = UInt16(rows)
 			image.width = UInt16(cols)
+			image.height = UInt16(rows)
 			image.rowBytes = UInt32(cols)
 			image.format = kCIFormatA8
-			image.data = pixel
+			image.name = ""
+			image.data = try imageHandle.readData(count: bytes)
+			return $0.merging([label: Set<Image>(arrayLiteral: image)]) {
+				$0.union($1)
+			}
+		}
+		images.forEach {
+			let index: Index = Index(in: context)
+			index.domain = MNIST.domain
+			index.family = mnist.family
+			index.option = [:]
+			index.script = String($0)
+			index.category = UInt64($0)
+			index.contents = $1
 		}
 		try context.save()
 		notification?.success(build: mnist)
 	}
-	private func update(mnist: MNIST) throws {
+	private func rebuild(mnist: MNIST) throws {
 		func dispatch(context: NSManagedObjectContext) {
 			do {
-				try update(mnist: mnist, context: context)
+				try rebuild(mnist: mnist, context: context)
 			} catch {
 				failure(error: error)
 			}
@@ -97,19 +104,19 @@ private extension Container {
 private extension Container {
 	@objc private func mnistrain(image mnist: URL) throws {
 		try FileManager.default.moveItem(at: mnist, to: cache(mnist: .train).image)
-		try update(mnist: .train)
+		try rebuild(mnist: .train)
 	}
 	@objc private func mnistrain(label mnist: URL) throws {
 		try FileManager.default.moveItem(at: mnist, to: cache(mnist: .train).label)
-		try update(mnist: .train)
+		try rebuild(mnist: .train)
 	}
 	@objc private func mnist10k(image mnist: URL) throws {
 		try FileManager.default.moveItem(at: mnist, to: cache(mnist: .t10k).image)
-		try update(mnist: .t10k)
+		try rebuild(mnist: .t10k)
 	}
 	@objc private func mnist10k(label mnist: URL) throws {
 		try FileManager.default.moveItem(at: mnist, to: cache(mnist: .t10k).label)
-		try update(mnist: .t10k)
+		try rebuild(mnist: .t10k)
 	}
 	private func selector(mnist: MNIST, key: String) throws -> String {
 		switch(mnist, key) {
@@ -150,7 +157,7 @@ extension Container {
 			return false
 		}
 		if stable {
-			try update(mnist: mnist)
+			try rebuild(mnist: mnist)
 		}
 	}
 }

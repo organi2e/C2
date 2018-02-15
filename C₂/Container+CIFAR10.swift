@@ -45,10 +45,10 @@ private extension Container {
 			let width: vImagePixelCount = vImagePixelCount(cols)
 			let rowBytes: Int = 4 * cols
 			let image: Image = Image(in: context)
-			image.domain = CIFAR10.domain
-			image.family = family
-			image.option = [:]
-			image.handle = Int(head)
+//			image.domain = CIFAR10.domain
+//			image.family = family
+//			image.option = [:]
+//			image.handle = Int(head)
 			image.width = UInt16(width)
 			image.height = UInt16(height)
 			image.rowBytes = UInt32(rowBytes)
