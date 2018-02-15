@@ -15,7 +15,6 @@ extension Image {
 	@NSManaged var height: UInt16
 	@NSManaged var rowBytes: UInt32
 	@NSManaged var format: CIFormat
-	@NSManaged var data: Data
 }
 extension Image {
 	public var la: la_object_t {
@@ -34,6 +33,7 @@ extension Image {
 			}
 			cblas_sscal(Int32(result.count), 1/256.0, UnsafeMutablePointer(mutating: result), 1)
 			return result
+			/*
 		case kCIFormatA16, kCIFormatR16, kCIFormatRGBA16:
 			let result: [Float] = [Float](repeating: 0, count: data.count / MemoryLayout<UInt16>.stride)
 			data.withUnsafeBytes {
@@ -41,6 +41,7 @@ extension Image {
 			}
 			cblas_sscal(Int32(result.count), 1/65536.0, UnsafeMutablePointer(mutating: result), 1)
 			return result
+			*/
 		default:
 			assertionFailure("CIImage format: \(format) has been not implemented")
 			return Array<Float>()
