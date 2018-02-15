@@ -9,8 +9,9 @@ public class Content: NSManagedObject {
 	
 }
 extension Content {
-	@NSManaged var domain: String
-	@NSManaged var family: String
-	@NSManaged var handle: Int
-	@NSManaged var option: [String: Any]
+	@NSManaged var data: Data
+	@NSManaged var name: String
+}
+extension Content {
+	@NSManaged var index: Index
 }
