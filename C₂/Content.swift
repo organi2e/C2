@@ -10,7 +10,7 @@ public class Content: NSManagedObject {
 }
 extension Content {
 	@NSManaged var data: Data
-	@NSManaged var name: String
+	@NSManaged var note: String?
 }
 extension Content {
 	@NSManaged var index: Index

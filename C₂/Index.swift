@@ -11,9 +11,8 @@ internal class Index: NSManagedObject {
 extension Index {
 	@NSManaged var domain: String
 	@NSManaged var family: String
-	@NSManaged var script: String
 	@NSManaged var option: [String: Any]
-	@NSManaged var category: UInt64
+	@NSManaged var label: String
 }
 extension Index {
 	@NSManaged var contents: Set<Content>

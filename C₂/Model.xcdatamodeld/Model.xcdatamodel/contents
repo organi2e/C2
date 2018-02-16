@@ -2,7 +2,7 @@
 <model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="13772" systemVersion="17D47" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
     <entity name="Content" representedClassName=".Content" isAbstract="YES" syncable="YES">
         <attribute name="data" attributeType="Binary" allowsExternalBinaryDataStorage="YES" syncable="YES"/>
-        <attribute name="name" attributeType="String" syncable="YES"/>
+        <attribute name="note" optional="YES" attributeType="String" syncable="YES"/>
         <relationship name="index" maxCount="1" deletionRule="Nullify" destinationEntity="Index" inverseName="contents" inverseEntity="Index" syncable="YES"/>
     </entity>
     <entity name="Image" representedClassName=".Image" parentEntity="Content" syncable="YES">
@@ -12,16 +12,15 @@
         <attribute name="width" attributeType="Integer 16" minValueString="0" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
     </entity>
     <entity name="Index" representedClassName=".Index" syncable="YES">
-        <attribute name="category" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES" syncable="YES"/>
         <attribute name="domain" attributeType="String" syncable="YES"/>
         <attribute name="family" attributeType="String" syncable="YES"/>
+        <attribute name="label" attributeType="String" syncable="YES"/>
         <attribute name="option" attributeType="Transformable" syncable="YES"/>
-        <attribute name="script" attributeType="String" syncable="YES"/>
         <relationship name="contents" toMany="YES" deletionRule="Cascade" destinationEntity="Content" inverseName="index" inverseEntity="Content" syncable="YES"/>
     </entity>
     <elements>
         <element name="Content" positionX="-36" positionY="9" width="128" height="90"/>
         <element name="Image" positionX="-54" positionY="-9" width="128" height="105"/>
-        <element name="Index" positionX="-36" positionY="36" width="128" height="135"/>
+        <element name="Index" positionX="-36" positionY="36" width="128" height="120"/>
     </elements>
 </model>
