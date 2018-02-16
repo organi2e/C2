@@ -112,6 +112,8 @@ public extension Container {
 			try build(fashionMNIST: fashionMNIST)
 		case let cifar10 as CIFAR10:
 			try build(cifar10: cifar10)
+		case let oxfordIIIT as OxfordIIIT:
+			try build(oxfordIIIT: oxfordIIIT)
 		default:
 			throw ErrorCases.implementation
 		}
