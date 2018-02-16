@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		87054C382031A5AF00780E96 /* Index.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87054C372031A5AF00780E96 /* Index.swift */; };
+		872946412036E1FE00C90752 /* Container+FashionMNIST.swift in Sources */ = {isa = PBXBuildFile; fileRef = 872946402036E1FE00C90752 /* Container+FashionMNIST.swift */; };
+		872946432036E21900C90752 /* FashionMNIST.plist in Resources */ = {isa = PBXBuildFile; fileRef = 872946422036E21900C90752 /* FashionMNIST.plist */; };
 		873FF74E202B70EE0035B234 /* Gunzip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 873FF74D202B70EE0035B234 /* Gunzip.swift */; };
 		8754320F2029AF64006D00C4 /* C2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 875432052029AF64006D00C4 /* C2.framework */; };
 		875432142029AF64006D00C4 /* C2Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 875432132029AF64006D00C4 /* C2Tests.swift */; };
@@ -38,6 +40,8 @@
 
 /* Begin PBXFileReference section */
 		87054C372031A5AF00780E96 /* Index.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Index.swift; path = "../../C₂/Index.swift"; sourceTree = "<group>"; };
+		872946402036E1FE00C90752 /* Container+FashionMNIST.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "Container+FashionMNIST.swift"; path = "../../C₂/Container+FashionMNIST.swift"; sourceTree = "<group>"; };
+		872946422036E21900C90752 /* FashionMNIST.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = FashionMNIST.plist; path = "../../C₂/FashionMNIST.plist"; sourceTree = "<group>"; };
 		873FF74D202B70EE0035B234 /* Gunzip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Gunzip.swift; path = "../../C₂/Gunzip.swift"; sourceTree = "<group>"; };
 		875432052029AF64006D00C4 /* C2.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = C2.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		875432082029AF64006D00C4 /* C2.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = C2.h; sourceTree = "<group>"; };
@@ -106,12 +110,14 @@
 				875432262029AF74006D00C4 /* Container+Context.swift */,
 				875432232029AF74006D00C4 /* Container+URLSessionDelegate.swift */,
 				8754321E2029AF74006D00C4 /* Container+MNIST.swift */,
+				872946402036E1FE00C90752 /* Container+FashionMNIST.swift */,
 				8754321F2029AF74006D00C4 /* Container+CIFAR10.swift */,
 				873FF74D202B70EE0035B234 /* Gunzip.swift */,
 				87D7EFB8202C62C100586280 /* Untar.swift */,
 				875432252029AF74006D00C4 /* Extensions.swift */,
 				875432212029AF74006D00C4 /* Model.xcdatamodeld */,
 				8754321D2029AF73006D00C4 /* MNIST.plist */,
+				872946422036E21900C90752 /* FashionMNIST.plist */,
 				877087E42029C2DE00C60994 /* CIFAR10.plist */,
 				875432082029AF64006D00C4 /* C2.h */,
 				875432092029AF64006D00C4 /* Info.plist */,
@@ -222,6 +228,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				875432282029AF74006D00C4 /* MNIST.plist in Resources */,
+				872946432036E21900C90752 /* FashionMNIST.plist in Resources */,
 				877087E52029C2DE00C60994 /* CIFAR10.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -251,6 +258,7 @@
 				875432312029AF74006D00C4 /* Content.swift in Sources */,
 				875432302029AF74006D00C4 /* Container+Context.swift in Sources */,
 				8754322D2029AF74006D00C4 /* Container+URLSessionDelegate.swift in Sources */,
+				872946412036E1FE00C90752 /* Container+FashionMNIST.swift in Sources */,
 				8754322F2029AF74006D00C4 /* Extensions.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

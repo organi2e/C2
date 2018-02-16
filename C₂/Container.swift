@@ -10,6 +10,11 @@ public protocol Series {
 	static var domain: String { get }
 	var family: String { get }
 }
+extension Series {
+	var domain: String {
+		return type(of: self).domain
+	}
+}
 public protocol Delegate {
 	func failure(error: Error)
 	func success(build: Series)
@@ -103,6 +108,8 @@ public extension Container {
 		switch series {
 		case let mnist as MNIST:
 			try build(mnist: mnist)
+		case let fashionMNIST as FashionMNIST:
+			try build(fashionMNIST: fashionMNIST)
 		case let cifar10 as CIFAR10:
 			try build(cifar10: cifar10)
 		default:

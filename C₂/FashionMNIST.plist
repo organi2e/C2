@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>train</key>
+	<dict>
+		<key>image</key>
+		<string>http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-images-idx3-ubyte.gz</string>
+		<key>label</key>
+		<string>http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-labels-idx1-ubyte.gz</string>
+	</dict>
+	<key>t10k</key>
+	<dict>
+		<key>image</key>
+		<string>http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-images-idx3-ubyte.gz</string>
+		<key>label</key>
+		<string>http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-labels-idx1-ubyte.gz</string>
+	</dict>
+	<key>labels</key>
+	<array>
+		<string>T-shirt/top</string>
+		<string>Trouser</string>
+		<string>Pullover</string>
+		<string>Dress</string>
+		<string>Coat</string>
+		<string>Sandal</string>
+		<string>Shirt</string>
+		<string>Sneaker</string>
+		<string>Bag</string>
+		<string>Ankle boot</string>
+	</array>
+</dict>
+</plist>

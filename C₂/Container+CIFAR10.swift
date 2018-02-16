@@ -50,14 +50,14 @@ private extension NSManagedObjectContext {
 			image.width = UInt16(cols)
 			image.height = UInt16(rows)
 			image.rowBytes = UInt32(rowBytes)
-			image.format = kCIFormatARGB8
+			image.format = kCIFormatRGBA8
 			image.data = Data(count: rowBytes * Int(height))
 			image.data.withUnsafeMutableBytes { (data: UnsafeMutablePointer<UInt8>) in
-				let result: Bool = tail.withUnsafeBytes {
-					vImageConvert_Planar8ToXRGB8888(255,
-													[vImage_Buffer(data: UnsafeMutablePointer<UInt8>(mutating: $0).advanced(by: 0*Int(height*width)), height: height, width: width, rowBytes: cols)],
+				let result: Bool = tail.withUnsafeBytes {//(b, g, r, x) -> bgrx = (r, g, b, x) -> rgbx
+					vImageConvert_Planar8ToBGRX8888([vImage_Buffer(data: UnsafeMutablePointer<UInt8>(mutating: $0).advanced(by: 0*Int(height*width)), height: height, width: width, rowBytes: cols)],
 													[vImage_Buffer(data: UnsafeMutablePointer<UInt8>(mutating: $0).advanced(by: 1*Int(height*width)), height: height, width: width, rowBytes: cols)],
 													[vImage_Buffer(data: UnsafeMutablePointer<UInt8>(mutating: $0).advanced(by: 2*Int(height*width)), height: height, width: width, rowBytes: cols)],
+													255,
 													[vImage_Buffer(data: data, height: height, width: width, rowBytes: rowBytes)],
 													0) == kvImageNoError
 				}
