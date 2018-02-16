@@ -25,6 +25,11 @@ public enum CIFAR10: Series {
 		return String(describing: self)
 	}
 }
+private extension CIFAR10 {
+	var key: String {
+		return "\(domain).\(family)"
+	}
+}
 private extension Container {
 	private func cache(cifar10: Void) throws -> URL {
 		let baseURL: URL = cache.appendingPathComponent(CIFAR10.domain, isDirectory: true)
@@ -77,6 +82,9 @@ private extension NSManagedObjectContext {
 }
 private extension Container {
 	private func rebuild(cifar10: CIFAR10, labels: [UInt8: String], rows: Int, cols: Int, data: Data, context: NSManagedObjectContext) throws {
+		guard let bool: Bool = get(for: cifar10.key)as?Bool, bool else {
+			return
+		}
 		try autoreleasepool {
 			try context.rebuild(cifar10: cifar10, labels: labels, rows: rows, cols: cols, data: data)
 			try context.save()
@@ -174,6 +182,7 @@ public extension Container {
 			let url: URL = URL(string: urlstring) else {
 				throw ErrorCases.dictionary
 		}
+		set(value: true, for: cifar10.key)
 		if fileManager.fileExists(atPath: cacheURL.path) {
 			try rebuild(cifar10: ())
 		} else if !isDownloading(url: url) {

@@ -102,6 +102,12 @@ extension Container {
 		}
 		return dictionary
 	}
+	func set(value: Any, for: String) {
+		state.set(value, forKey: `for`)
+	}
+	func get(for: String) -> Any? {
+		return state.value(forKey: `for`)
+	}
 }
 public extension Container {
 	public func build(series: Series) throws {
