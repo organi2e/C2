@@ -18,8 +18,6 @@
 	<string>cifar-10-batches-bin/data_batch_4.bin</string>
 	<key>batch5</key>
 	<string>cifar-10-batches-bin/data_batch_5.bin</string>
-	<key>batch6</key>
-	<string>cifar-10-batches-bin/data_batch_6.bin</string>
 	<key>test</key>
 	<string>cifar-10-batches-bin/test_batch.bin</string>
 	<key>meta</key>
