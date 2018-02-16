@@ -26,7 +26,7 @@ extension Image {
 			return data.withUnsafeBytes {
 				Array(UnsafeBufferPointer(start: $0, count: data.count / MemoryLayout<Float>.stride))
 			}
-		case kCIFormatA8, kCIFormatR8, kCIFormatARGB8, kCIFormatBGRA8:
+		case kCIFormatA8, kCIFormatR8, kCIFormatARGB8, kCIFormatBGRA8, kCIFormatRGBA8:
 			let result: [Float] = [Float](repeating: 0, count: data.count / MemoryLayout<UInt8>.stride)
 			data.withUnsafeBytes {
 				vDSP_vfltu8($0, 1, UnsafeMutablePointer(mutating: result), 1, vDSP_Length(result.count))
