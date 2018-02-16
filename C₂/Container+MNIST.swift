@@ -53,15 +53,15 @@ private extension Container {
 		let count: Int = min(labelcount, imagecount)
 		let bytes: Int = rows * cols
 		let images: [UInt8: Set<Image>] = try [Void](repeating: (), count: count).reduce([UInt8: Set<Image>]()) {
-			let _: Void = $1 //gabage
+			let _: Void = $1//gabage
 			let label: UInt8 = try labelHandle.readValue()
+			let pixel: Data = try imageHandle.readData(count: bytes)
 			let image: Image = Image(in: context)
 			image.width = UInt16(cols)
 			image.height = UInt16(rows)
 			image.rowBytes = UInt32(cols)
 			image.format = kCIFormatA8
-			image.name = ""
-			image.data = try imageHandle.readData(count: bytes)
+			image.data = pixel
 			return $0.merging([label: Set<Image>(arrayLiteral: image)]) {
 				$0.union($1)
 			}
@@ -71,8 +71,7 @@ private extension Container {
 			index.domain = MNIST.domain
 			index.family = mnist.family
 			index.option = [:]
-			index.script = String($0)
-			index.category = UInt64($0)
+			index.label = String($0)
 			index.contents = $1
 		}
 		try context.save()
