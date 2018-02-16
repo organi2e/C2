@@ -11,20 +11,18 @@ private let urlKey: String = "url"
 private let rowsKey: String = "rows"
 private let colsKey: String = "cols"
 private let metaKey: String = "meta"
-public extension Container {
-	public enum CIFAR10: Series {
-		case batch1
-		case batch2
-		case batch3
-		case batch4
-		case batch5
-		case test
-		public static var domain: String {
-			return String(describing: self)
-		}
-		public var family: String {
-			return String(describing: self)
-		}
+public enum CIFAR10: Series {
+	case batch1
+	case batch2
+	case batch3
+	case batch4
+	case batch5
+	case test
+	public static var domain: String {
+		return String(describing: self)
+	}
+	public var family: String {
+		return String(describing: self)
 	}
 }
 private extension Container {
@@ -35,7 +33,7 @@ private extension Container {
 	}
 }
 private extension NSManagedObjectContext {
-	func rebuild(cifar10: Container.CIFAR10, labels: [UInt8: String], rows: Int, cols: Int, data: Data) throws {
+	func rebuild(cifar10: CIFAR10, labels: [UInt8: String], rows: Int, cols: Int, data: Data) throws {
 		try index(series: cifar10).forEach(delete)
 		let data: [(UInt8, Data)] = data.chunk(width: rows * cols * 3 + 1).map {
 			($0.toValue(), $0[1..<$0.count])
@@ -159,12 +157,12 @@ private extension Container {
 	}
 }
 private extension Container {
-	@objc private func cifar10(location: URL) throws {
-		try FileManager.default.moveItem(at: location, to: cache(cifar10: ()))
+	@objc private func cifar10(url: URL) throws {
+		try FileManager.default.moveItem(at: url, to: cache(cifar10: ()))
 		try rebuild(cifar10: ())
 	}
 	private func selector(cifar10: Void) -> String {
-		return #selector(cifar10(location:)).description
+		return #selector(cifar10(url:)).description
 	}
 }
 public extension Container {

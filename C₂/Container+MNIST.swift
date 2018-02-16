@@ -9,17 +9,17 @@ import CoreImage
 private let imageKey: String = "image"
 private let labelKey: String = "label"
 private let labelsKey: String = "labels"
-extension Container {
-	public enum MNIST: Series {
-		case train
-		case t10k
-		public static var domain: String {
-			return String(describing: self)
-		}
-		public var family: String {
-			return String(describing: self)
-		}
+public enum MNIST: Series {
+	case train
+	case t10k
+	public static var domain: String {
+		return String(describing: self)
 	}
+	public var family: String {
+		return String(describing: self)
+	}
+}
+extension Container {
 	public enum MNISTError: Error {
 		case format
 	}
@@ -32,7 +32,7 @@ private extension Container {
 	}
 }
 private extension NSManagedObjectContext {
-	func rebuild(mnist: Container.MNIST, labels: [String], labelHandle: Supplier, imageHandle: Supplier) throws {
+	func rebuild(mnist: MNIST, labels: [String], labelHandle: Supplier, imageHandle: Supplier) throws {
 		let labelheader: [UInt32] = try labelHandle.readArray(count: 2)
 		let imageheader: [UInt32] = try imageHandle.readArray(count: 4)
 		let labelheads: [Int] = labelheader.map { Int(UInt32(bigEndian: $0)) }
@@ -108,32 +108,32 @@ private extension Container {
 	}
 }
 private extension Container {
-	@objc private func mnistrain(image mnist: URL) throws {
-		try FileManager.default.moveItem(at: mnist, to: cache(mnist: .train).image)
+	@objc private func MNISTTrainImage(url: URL) throws {
+		try FileManager.default.moveItem(at: url, to: cache(mnist: .train).image)
 		try rebuild(mnist: .train)
 	}
-	@objc private func mnistrain(label mnist: URL) throws {
-		try FileManager.default.moveItem(at: mnist, to: cache(mnist: .train).label)
+	@objc private func MNISTTrainLabel(url: URL) throws {
+		try FileManager.default.moveItem(at: url, to: cache(mnist: .train).label)
 		try rebuild(mnist: .train)
 	}
-	@objc private func mnist10k(image mnist: URL) throws {
-		try FileManager.default.moveItem(at: mnist, to: cache(mnist: .t10k).image)
+	@objc private func MNISTT10kImage(url: URL) throws {
+		try FileManager.default.moveItem(at: url, to: cache(mnist: .t10k).image)
 		try rebuild(mnist: .t10k)
 	}
-	@objc private func mnist10k(label mnist: URL) throws {
-		try FileManager.default.moveItem(at: mnist, to: cache(mnist: .t10k).label)
+	@objc private func MNISTT10kLabel(url: URL) throws {
+		try FileManager.default.moveItem(at: url, to: cache(mnist: .t10k).label)
 		try rebuild(mnist: .t10k)
 	}
 	private func selector(mnist: MNIST, key: String) throws -> String {
 		switch(mnist, key) {
 		case (.train, imageKey):
-			return #selector(mnistrain(image:)).description
+			return #selector(MNISTTrainImage(url:)).description
 		case (.train, labelKey):
-			return #selector(mnistrain(label:)).description
+			return #selector(MNISTTrainLabel(url:)).description
 		case (.t10k, imageKey):
-			return #selector(mnist10k(image:)).description
+			return #selector(MNISTT10kImage(url:)).description
 		case (.t10k, labelKey):
-			return #selector(mnist10k(label:)).description
+			return #selector(MNISTT10kLabel(url:)).description
 		default:
 			throw ErrorCases.selector
 		}

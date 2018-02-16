@@ -9,16 +9,14 @@ import CoreImage
 private let imageKey: String = "image"
 private let labelKey: String = "label"
 private let labelsKey: String = "labels"
-extension Container {
-	public enum FashionMNIST: Series {
-		case train
-		case t10k
-		public static var domain: String {
-			return String(describing: self)
-		}
-		public var family: String {
-			return String(describing: self)
-		}
+public enum FashionMNIST: Series {
+	case train
+	case t10k
+	public static var domain: String {
+		return String(describing: self)
+	}
+	public var family: String {
+		return String(describing: self)
 	}
 }
 private extension Container {
@@ -29,7 +27,7 @@ private extension Container {
 	}
 }
 private extension NSManagedObjectContext {
-	func rebuild(fashionMNIST: Container.FashionMNIST, labels: [String], labelHandle: Supplier, imageHandle: Supplier) throws {
+	func rebuild(fashionMNIST: FashionMNIST, labels: [String], labelHandle: Supplier, imageHandle: Supplier) throws {
 		let labelheader: [UInt32] = try labelHandle.readArray(count: 2)
 		let imageheader: [UInt32] = try imageHandle.readArray(count: 4)
 		let labelheads: [Int] = labelheader.map { Int(UInt32(bigEndian: $0)) }

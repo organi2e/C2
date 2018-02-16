@@ -15,7 +15,6 @@ extension Series {
 extension NSManagedObjectContext {
 	func test(series: Series, count: Int) throws {
 		let baseURL: URL = FileManager.default.temporaryDirectory
-		print(baseURL)
 		
 		let labels: [String] = try Array(label(series: series))
 		XCTAssert(labels.count == count)
@@ -68,13 +67,16 @@ class C2Tests: XCTestCase {
 		}
 	}
 	func testMNIST() {
-		dispatch(series: Container.MNIST.train, count: 10)
+		dispatch(series: MNIST.train, count: 10)
 	}
 	func testFashionMNIST() {
-		dispatch(series: Container.FashionMNIST.train, count: 10)
+		dispatch(series: FashionMNIST.train, count: 10)
 	}
 	func testCIFAR10() {
-		dispatch(series: Container.CIFAR10.batch1, count: 10)
+		dispatch(series: CIFAR10.batch1, count: 10)
+	}
+	func testOxfordIIIT() {
+		dispatch(series: OxfordIIIT.pet, count: 0)
 	}
 }
 extension C2Tests: C2.Delegate {
