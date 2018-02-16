@@ -35,7 +35,7 @@ private extension Container {
 	}
 }
 private extension NSManagedObjectContext {
-	func rebuild(cifar10: Container.CIFAR10, rows: Int, cols: Int, data: Data) throws -> [Container.CIFAR10: [UInt8: Set<Image>]] {
+	func rebuild(cifar10: Container.CIFAR10, labels: [UInt8: String], rows: Int, cols: Int, data: Data) throws {
 		try index(series: cifar10).forEach(delete)
 		let data: [(UInt8, Data)] = data.chunk(width: rows * cols * 3 + 1).map {
 			($0.toValue(), $0[1..<$0.count])
@@ -50,27 +50,46 @@ private extension NSManagedObjectContext {
 			image.width = UInt16(cols)
 			image.height = UInt16(rows)
 			image.rowBytes = UInt32(rowBytes)
-			image.format = kCIFormatRGBA8
+			image.format = kCIFormatARGB8
 			image.data = Data(count: rowBytes * Int(height))
 			image.data.withUnsafeMutableBytes { (data: UnsafeMutablePointer<UInt8>) in
-				let result: vImage_Error = tail.withUnsafeBytes {
-					vImageConvert_Planar8ToBGRX8888([vImage_Buffer(data: UnsafeMutablePointer<UInt8>(mutating: $0).advanced(by: 2*Int(height*width)), height: height, width: width, rowBytes: rowBytes)],
-													[vImage_Buffer(data: UnsafeMutablePointer<UInt8>(mutating: $0).advanced(by: 1*Int(height*width)), height: height, width: width, rowBytes: rowBytes)],
-													[vImage_Buffer(data: UnsafeMutablePointer<UInt8>(mutating: $0).advanced(by: 0*Int(height*width)), height: height, width: width, rowBytes: rowBytes)],
-													255,
+				let result: Bool = tail.withUnsafeBytes {
+					vImageConvert_Planar8ToXRGB8888(255,
+													[vImage_Buffer(data: UnsafeMutablePointer<UInt8>(mutating: $0).advanced(by: 0*Int(height*width)), height: height, width: width, rowBytes: cols)],
+													[vImage_Buffer(data: UnsafeMutablePointer<UInt8>(mutating: $0).advanced(by: 1*Int(height*width)), height: height, width: width, rowBytes: cols)],
+													[vImage_Buffer(data: UnsafeMutablePointer<UInt8>(mutating: $0).advanced(by: 2*Int(height*width)), height: height, width: width, rowBytes: cols)],
 													[vImage_Buffer(data: data, height: height, width: width, rowBytes: rowBytes)],
-													0)
+													0) == kvImageNoError
 				}
-				assert(result == kvImageNoError)
+				assert(result)
 			}
 			return $0.merging([head: Set<Image>(arrayLiteral: image)]) {
 				$0.union($1)
 			}
 		}
-		return[cifar10: images]
+		images.forEach {
+			let index: Index = Index(in: self)
+			index.domain = type(of: cifar10).domain
+			index.family = cifar10.family
+			index.option = [:]
+			index.label = labels[$0] ?? ""
+			index.contents = $1
+		}
 	}
 }
 private extension Container {
+	private func rebuild(cifar10: CIFAR10, labels: [UInt8: String], rows: Int, cols: Int, data: Data, context: NSManagedObjectContext) throws {
+		try autoreleasepool {
+			try context.rebuild(cifar10: cifar10, labels: labels, rows: rows, cols: cols, data: data)
+			try context.save()
+			context.reset()
+		}
+		context.reset()
+		func dispatch() {
+			notification?.success(build: cifar10)
+		}
+		viewContext.perform(dispatch)
+	}
 	private func rebuild(cifar10: Void, context: NSManagedObjectContext) throws {
 		let dictionary: [String: Any] = try plist(series: CIFAR10.test)
 		guard
@@ -85,48 +104,36 @@ private extension Container {
 			let meta: String = dictionary[metaKey]as?String else {
 				throw ErrorCases.dictionary
 		}
+		let labels: [UInt8: String] = try autoreleasepool {
+			let gunzip: Gunzip = try Gunzip(url: cache(cifar10: ()), options: .mappedRead, maximum: rows * cols * MemoryLayout<UInt8>.stride * 4)
+			let untar: Untar = Untar(supplier: gunzip)
+			return [UInt8: String](uniqueKeysWithValues: untar.flatMap {
+				guard $0 == meta else { return nil }
+				return String(data: $1, encoding: .utf8)
+			}.joined().components(separatedBy: .newlines).filter{!$0.isEmpty}.enumerated().map{
+					(UInt8($0), $1)
+			})
+		}
 		let gunzip: Gunzip = try Gunzip(url: cache(cifar10: ()), options: .mappedRead, maximum: rows * cols * MemoryLayout<UInt8>.stride * 4)
 		let untar: Untar = Untar(supplier: gunzip)
-		let (labels, images): ([UInt8: String], [CIFAR10: [UInt8: Set<Image>]]) = try untar.reduce(([UInt8: String](), [CIFAR10: [UInt8: Set<Image>]]())) {
-			switch $1.0 {
+		try untar.forEach {
+			switch $0 {
 			case batch1:
-				return try($0.0, $0.1.merging(context.rebuild(cifar10: .batch1, rows: rows, cols: cols, data: $1.1)){$0.merging($1){$0.union($1)}})
+				try rebuild(cifar10: .batch1, labels: labels, rows: rows, cols: cols, data: $1, context: context)
 			case batch2:
-				return try($0.0, $0.1.merging(context.rebuild(cifar10: .batch2, rows: rows, cols: cols, data: $1.1)){$0.merging($1){$0.union($1)}})
+				try rebuild(cifar10: .batch2, labels: labels, rows: rows, cols: cols, data: $1, context: context)
 			case batch3:
-				return try($0.0, $0.1.merging(context.rebuild(cifar10: .batch3, rows: rows, cols: cols, data: $1.1)){$0.merging($1){$0.union($1)}})
+				try rebuild(cifar10: .batch3, labels: labels, rows: rows, cols: cols, data: $1, context: context)
 			case batch4:
-				return try($0.0, $0.1.merging(context.rebuild(cifar10: .batch4, rows: rows, cols: cols, data: $1.1)){$0.merging($1){$0.union($1)}})
+				try rebuild(cifar10: .batch4, labels: labels, rows: rows, cols: cols, data: $1, context: context)
 			case batch5:
-				return try($0.0, $0.1.merging(context.rebuild(cifar10: .batch5, rows: rows, cols: cols, data: $1.1)){$0.merging($1){$0.union($1)}})
+				try rebuild(cifar10: .batch5, labels: labels, rows: rows, cols: cols, data: $1, context: context)
 			case test:
-				return try($0.0, $0.1.merging(context.rebuild(cifar10: .test, rows: rows, cols: cols, data: $1.1)){$0.merging($1){$0.union($1)}})
-			case meta:
-				guard let string: String = String(data: $1.1, encoding: .utf8) else {
-					throw meta
-				}
-				return($0.0.merging(string.components(separatedBy: .newlines).filter{!$0.isEmpty}.enumerated().map{
-					(UInt8($0), $1)
-				}){$1}, $0.1)
+				try rebuild(cifar10: .test, labels: labels, rows: rows, cols: cols, data: $1, context: context)
 			default:
 				break
 			}
-			return $0
 		}
-		images.forEach {
-			let domain: String = type(of: $0).domain
-			let family: String = $0.family
-			$1.forEach {
-				let index: Index = Index(in: context)
-				index.domain = domain
-				index.family = family
-				index.option = [:]
-				index.label = labels[$0] ?? ""
-				index.contents = $1
-			}
-		}
-		try context.save()
-		notification?.success(build: CIFAR10.test)
 	}
 	func rebuild(cifar10: Void) throws {
 		func dispatch(context: NSManagedObjectContext) {

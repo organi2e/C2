@@ -30,13 +30,10 @@ private extension Container {
 		return(image: baseURL.appendingPathComponent(imageKey), label: baseURL.appendingPathComponent(labelKey))
 	}
 }
-private extension Container {
-	private func rebuild(mnist: MNIST, context: NSManagedObjectContext) throws {
-		let (imageCache, labelCache): (URL, URL) = try cache(mnist: mnist)
-		let imageHandle: Gunzip = try Gunzip(url: imageCache, maximum: 1024)
-		let labelHandle: Gunzip = try Gunzip(url: labelCache, maximum: 1024)
-		let labelheader: [UInt32] = try labelHandle.readArray(count: 2)
-		let imageheader: [UInt32] = try imageHandle.readArray(count: 4)
+private extension NSManagedObjectContext {
+	func rebuild(mnist: Container.MNIST, labels: Supplier, images: Supplier) throws {
+		let labelheader: [UInt32] = try labels.readArray(count: 2)
+		let imageheader: [UInt32] = try images.readArray(count: 4)
 		let labelheads: [Int] = labelheader.map { Int(UInt32(bigEndian: $0)) }
 		let imageheads: [Int] = imageheader.map { Int(UInt32(bigEndian: $0)) }
 		guard
@@ -46,17 +43,14 @@ private extension Container {
 			let cols: Int = imageheads[safe: 3], labelcount == imagecount else {
 				throw "error"
 		}
-		try context.index(series: mnist).forEach {
-			context.delete($0)
-			try context.save()
-		}
+		try index(series: mnist).forEach(delete)
 		let count: Int = min(labelcount, imagecount)
 		let bytes: Int = rows * cols
 		let images: [UInt8: Set<Image>] = try [Void](repeating: (), count: count).reduce([UInt8: Set<Image>]()) {
 			let _: Void = $1//gabage
-			let label: UInt8 = try labelHandle.readValue()
-			let pixel: Data = try imageHandle.readData(count: bytes)
-			let image: Image = Image(in: context)
+			let label: UInt8 = try labels.readValue()
+			let pixel: Data = try images.readData(count: bytes)
+			let image: Image = Image(in: self)
 			image.width = UInt16(cols)
 			image.height = UInt16(rows)
 			image.rowBytes = UInt32(cols)
@@ -67,13 +61,19 @@ private extension Container {
 			}
 		}
 		images.forEach {
-			let index: Index = Index(in: context)
-			index.domain = MNIST.domain
+			let index: Index = Index(in: self)
+			index.domain = type(of: mnist).domain
 			index.family = mnist.family
 			index.option = [:]
 			index.label = String($0)
 			index.contents = $1
 		}
+	}
+}
+private extension Container {
+	private func rebuild(mnist: MNIST, context: NSManagedObjectContext) throws {
+		let (image, label): (URL, URL) = try cache(mnist: mnist)
+		try context.rebuild(mnist: mnist, labels: Gunzip(url: label, maximum: 784), images: Gunzip(url: image, maximum: 784))
 		try context.save()
 		notification?.success(build: mnist)
 	}
