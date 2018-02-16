@@ -37,7 +37,6 @@ extension NSManagedObjectContext {
 											  format: ciContext.workingFormat,
 											  colorSpace: ciContext.workingColorSpace!,
 											  options: [:])
-		
 	}
 }
 class C2Tests: XCTestCase {

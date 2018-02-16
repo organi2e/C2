@@ -19,12 +19,12 @@ extension Index {
 }
 extension NSManagedObjectContext {
 	func label(series: Series) throws -> Set<String> {
-		let request: NSFetchRequest<Index> = NSFetchRequest<Index>(entityName: Index.entity().name ?? String(describing: Index.self))
+		let request: NSFetchRequest<Index> = NSFetchRequest<Index>(entityName: Index.entityName)
 		request.predicate = NSPredicate(format: "domain = %@ and family = %@", type(of: series).domain, series.family)
 		return try Set<String>(fetch(request).map{$0.label})
 	}
 	func index(series: Series, labels: [String] = []) throws -> [Index] {
-		let request: NSFetchRequest<Index> = NSFetchRequest<Index>(entityName: Index.entity().name ?? String(describing: Index.self))
+		let request: NSFetchRequest<Index> = NSFetchRequest<Index>(entityName: Index.entityName)
 		let format: String = "domain = %@ and family = %@" + ( labels.isEmpty ? "" : "and (\([String](repeating: "label = %@", count: labels.count).joined(separator: " or ")))" )
 		let values: [Any] = [type(of: series).domain, series.family] + labels
 		request.predicate = NSPredicate(format: format, argumentArray: values)

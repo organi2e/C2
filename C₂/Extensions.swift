@@ -6,6 +6,15 @@
 //
 import Foundation
 import Compression
+import CoreData
+extension NSManagedObject {
+	class var entityName: String {
+		return entity().name ?? String(describing: self)
+	}
+	var entityName: String {
+		return type(of: self).entityName
+	}
+}
 extension String: Error {
 	
 }
