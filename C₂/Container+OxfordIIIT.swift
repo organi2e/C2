@@ -24,9 +24,31 @@ extension Container {
 	}
 }
 private extension Container {
+	private func rebuild(oxfordIIIT: OxfordIIIT, context: NSManagedObjectContext) throws {
+		notification?.success(build: oxfordIIIT)
+	}
+	private func rebuild(oxfordIIIT: OxfordIIIT) throws {
+		let cacheURL: URL = try cache(oxfordIIIT: oxfordIIIT)
+		func dispatch(context: NSManagedObjectContext) {
+			do {
+				try rebuild(oxfordIIIT: oxfordIIIT, context: context)
+			} catch {
+				failure(error: error)
+			}
+		}
+		func dispatch() {
+			guard FileManager.default.fileExists(atPath: cacheURL.path) else {
+				return
+			}
+			performBackgroundTask(dispatch)
+		}
+		viewContext.perform(dispatch)//execlusive execution
+	}
+}
+private extension Container {
 	@objc private func OxfordIIITPet(url: URL) throws {
 		try FileManager.default.moveItem(at: url, to: cache(oxfordIIIT: .pet))
-//		try rebuild(oxford: .pet)
+		try rebuild(oxfordIIIT: .pet)
 	}
 	private func selector(oxfordIIIT: OxfordIIIT) -> String {
 		switch oxfordIIIT {
@@ -45,31 +67,11 @@ extension Container {
 				throw ErrorCases.dictionary
 		}
 		if fileManager.fileExists(atPath: cacheURL.path) {
-			
+			try rebuild(oxfordIIIT: oxfordIIIT)
 		} else if !isDownloading(url: url) {
 			let downloadTask: URLSessionDownloadTask = download(url: url)
 			downloadTask.taskDescription = selector(oxfordIIIT: oxfordIIIT)
 			downloadTask.resume()
 		}
 	}
-	/*
-	public func build(cifar10: CIFAR10) throws {
-		let fileManager: FileManager = .default
-		let cacheURL: URL = try cache(cifar10: ())
-		guard
-			let urlstring = try plist(series: cifar10)[urlKey]as?String,
-			let url: URL = URL(string: urlstring) else {
-				throw ErrorCases.dictionary
-		}
-		/*
-		if fileManager.fileExists(atPath: cacheURL.path) {
-			try rebuild(cifar10: ())
-		} else if !isDownloading(url: url) {
-			let downloadTask: URLSessionDownloadTask = download(url: url)
-			downloadTask.taskDescription = selector(cifar10: ())
-			downloadTask.resume()
-		}
-		*/
-	}
-	*/
 }

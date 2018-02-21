@@ -85,6 +85,7 @@ private extension Container {
 		notification?.success(build: mnist)
 	}
 	private func rebuild(mnist: MNIST) throws {
+		let (image, label): (URL, URL) = try cache(mnist: mnist)
 		func dispatch(context: NSManagedObjectContext) {
 			do {
 				try rebuild(mnist: mnist, context: context)
@@ -93,16 +94,11 @@ private extension Container {
 			}
 		}
 		func dispatch() {
-			do {
-				let (image, label): (URL, URL) = try cache(mnist: mnist)
-				let fileManager: FileManager = .default
-				guard fileManager.fileExists(atPath: image.path), fileManager.fileExists(atPath: label.path) else {
-					return
-				}
-				performBackgroundTask(dispatch)
-			} catch {
-				failure(error: error)
+			let fileManager: FileManager = .default
+			guard fileManager.fileExists(atPath: image.path), fileManager.fileExists(atPath: label.path) else {
+				return
 			}
+			performBackgroundTask(dispatch)
 		}
 		viewContext.perform(dispatch)//execlusive execution
 	}

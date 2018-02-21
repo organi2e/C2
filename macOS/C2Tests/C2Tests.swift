@@ -15,6 +15,7 @@ extension Series {
 extension NSManagedObjectContext {
 	func test(series: Series, count: Int) throws {
 		let baseURL: URL = FileManager.default.temporaryDirectory
+		try FileManager.default.createDirectory(at: baseURL, withIntermediateDirectories: true, attributes: nil)
 		
 		let labels: [String] = try Array(label(series: series))
 		XCTAssert(labels.count == count)
@@ -35,7 +36,7 @@ extension NSManagedObjectContext {
 		try ciContext.writeTIFFRepresentation(of: image.ciImage,
 											  to: baseURL.appendingPathComponent("\(series.domain)-\(series.family)-\(label)").appendingPathExtension("tiff"),
 											  format: ciContext.workingFormat,
-											  colorSpace: ciContext.workingColorSpace!,
+											  colorSpace: CGColorSpaceCreateDeviceRGB(),
 											  options: [:])
 	}
 }

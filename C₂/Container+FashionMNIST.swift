@@ -80,6 +80,7 @@ private extension Container {
 		notification?.success(build: fashionMNIST)
 	}
 	private func rebuild(fashionMNIST: FashionMNIST) throws {
+		let (image, label): (URL, URL) = try cache(fashionMNIST: fashionMNIST)
 		func dispatch(context: NSManagedObjectContext) {
 			do {
 				try rebuild(fashionMNIST: fashionMNIST, context: context)
@@ -88,16 +89,11 @@ private extension Container {
 			}
 		}
 		func dispatch() {
-			do {
-				let (image, label): (URL, URL) = try cache(fashionMNIST: fashionMNIST)
-				let fileManager: FileManager = .default
-				guard fileManager.fileExists(atPath: image.path), fileManager.fileExists(atPath: label.path) else {
-					return
-				}
-				performBackgroundTask(dispatch)
-			} catch {
-				failure(error: error)
+			let fileManager: FileManager = .default
+			guard fileManager.fileExists(atPath: image.path), fileManager.fileExists(atPath: label.path) else {
+				return
 			}
+			performBackgroundTask(dispatch)
 		}
 		viewContext.perform(dispatch)//execlusive execution
 	}
